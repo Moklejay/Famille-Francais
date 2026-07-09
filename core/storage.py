@@ -62,8 +62,6 @@ DEFAULT_PROFILE = {
     "scenarios_completed": [],
     "story_progress": {},     # story_id -> chapter/turn index
     "stories_completed": [],  # story_ids that reached a natural ending
-    "last_scenario_week": None,  # ISO year-week a scenario was last completed (joint quest recency)
-    "last_story_week": None,     # ISO year-week Story Mode was last advanced (joint quest recency)
     "quests": {
         "daily": {"date": None, "quest_id": None, "done": False},
         "weekly": {"week": None, "quest_id": None, "done": False},
@@ -74,7 +72,6 @@ DEFAULT_PROFILE = {
 
 DEFAULT_DB = {
     "profiles": {},
-    "joint_quests_completed": [],   # [{quest_id, date, participants}]
     "family_created": None,
 }
 
@@ -232,8 +229,7 @@ def merge_and_save(db: dict, snapshot: dict) -> tuple[dict, dict]:
     version wins for that profile. A profile that existed in `snapshot` but
     is missing from `db` was deliberately deleted this session (e.g. the
     Settings page's "Supprimer ce profil" button) -- that deletion is
-    replayed onto the freshly-read copy too. The joint-quest-completion log
-    is append-only, so we union it rather than replace it.
+    replayed onto the freshly-read copy too.
 
     Returns (merged_db, save_status) -- call sites should replace their
     in-memory db with `merged_db` afterwards so their view reflects the
@@ -254,13 +250,6 @@ def merge_and_save(db: dict, snapshot: dict) -> tuple[dict, dict]:
             live["profiles"][name] = profile        # we changed this one -> ours wins
         else:
             live["profiles"].setdefault(name, profile)  # unseen elsewhere -> keep it
-
-    seen = {(j.get("quest_id"), j.get("week")) for j in live.get("joint_quests_completed", [])}
-    for j in db.get("joint_quests_completed", []):
-        key = (j.get("quest_id"), j.get("week"))
-        if key not in seen:
-            live["joint_quests_completed"].append(j)
-            seen.add(key)
 
     live["family_created"] = live.get("family_created") or db.get("family_created")
 
@@ -295,7 +284,17 @@ def touch_daily_activity(profile: dict) -> int:
         return 0  # already counted today
 
     if last is not None:
-        last_date = date.fromisoformat(last)
+        try:
+            last_date = date.fromisoformat(last)
+        except (ValueError, TypeError):
+            # last_active_date isn't a parseable ISO date -- e.g. a
+            # hand-edited or otherwise corrupted backup file was restored
+            # (see Settings page). Treat it the same as "no prior activity"
+            # rather than crashing every page load for this profile.
+            profile["streak"]["current"] = 1
+            profile["streak"]["longest"] = max(profile["streak"]["longest"], 1)
+            profile["streak"]["last_active_date"] = today.isoformat()
+            return 0
         gap = (today - last_date).days
         if gap <= 0:
             # last_active_date is in the future relative to "today" (clock

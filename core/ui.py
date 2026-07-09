@@ -4,9 +4,9 @@ ui.py
 Shared Streamlit UI bits: theme CSS, sidebar profile switcher, XP/streak
 widgets, and small celebration helpers used across every page.
 
-Also owns the "safe save" pattern (see save() below) that lets two people
-use the hosted app from separate devices at the same time without one of
-them silently overwriting the other's progress.
+Also owns the "safe save" pattern (see save() below) that lets multiple
+people use the hosted app from separate devices at the same time without
+one of them silently overwriting another's progress.
 """
 
 from __future__ import annotations
@@ -16,15 +16,15 @@ from core import storage, gamification as game, content_bank as cb
 
 THEMES = {
     "Sunrise": {"primary": "#FF6F59", "bg": "#FFF6F0", "accent": "#FFC1B6"},
-    "Océan": {"primary": "#1F8A9E", "bg": "#F0F9FA", "accent": "#B6E4EA"},
-    "Automne": {"primary": "#C9762C", "bg": "#FBF3E9", "accent": "#F0C79A"},
-    "Aurore": {"primary": "#7C5CBF", "bg": "#F5F1FB", "accent": "#D6C9F0"},
+    "Ocean": {"primary": "#1F8A9E", "bg": "#F0F9FA", "accent": "#B6E4EA"},
+    "Autumn": {"primary": "#C9762C", "bg": "#FBF3E9", "accent": "#F0C79A"},
+    "Aurora": {"primary": "#7C5CBF", "bg": "#F5F1FB", "accent": "#D6C9F0"},
 }
 
 AVATARS = ["🦊", "🐸", "🦄", "🐨", "🦋", "🐧", "🦁", "🐢"]
 
 # A couple of avatars are level-locked rewards -- content_bank.LEVEL_UNLOCKS
-# already promises "Avatar spécial débloqué" at these levels, so Settings
+# already promises "Special avatar unlocked" at these levels, so Settings
 # and profile creation need to actually gate them the same way
 # THEME_UNLOCK_LEVEL gates themes below, otherwise the "unlock" is just
 # text with nothing behind it (every avatar was pickable from level 1).
@@ -79,7 +79,7 @@ def save():
     """
     Persist the in-memory db safely: only the profile(s) this session
     actually modified get written; everything else is re-read fresh first
-    (so a sibling's concurrent session on another device isn't overwritten).
+    (so someone's concurrent session on another device isn't overwritten).
     Refreshes st.session_state.db to the merged, authoritative result.
     """
     merged, status = storage.merge_and_save(
@@ -100,14 +100,14 @@ def require_profile():
     friendly message if no profile is selected yet."""
     init_app_state()
     if not st.session_state.active_profile or st.session_state.active_profile not in st.session_state.db["profiles"]:
-        st.warning("👋 Choisis d'abord ton profil sur la page d'accueil (Home) !")
+        st.warning("👋 Choose your profile first on the Home page!")
         st.stop()
     profile = st.session_state.db["profiles"][st.session_state.active_profile]
     inject_theme(profile.get("theme", "Sunrise"))
     bonus = game.record_daily_login(profile)
     game.ensure_quest_slots(profile)
     if bonus:
-        st.toast(f"🔥 Bonus de série ! +{bonus} XP", icon="🔥")
+        st.toast(f"🔥 Streak bonus! +{bonus} XP", icon="🔥")
     if bonus:
         # Persist the streak update right away, in case this session never
         # visits a page that saves for another reason (e.g. only checking
@@ -123,37 +123,37 @@ def sidebar_switcher():
     if not names:
         return
     with st.sidebar:
-        st.markdown("### 👤 Profil actif")
+        st.markdown("### 👤 Active profile")
         current = st.session_state.active_profile if st.session_state.active_profile in names else names[0]
-        choice = st.selectbox("Qui joue ?", names, index=names.index(current), key="profile_switcher")
+        choice = st.selectbox("Who's playing?", names, index=names.index(current), key="profile_switcher")
         if choice != st.session_state.active_profile:
             st.session_state.active_profile = choice
             st.rerun()
         profile = db["profiles"][choice]
         st.markdown(f"### {profile['avatar']} {choice}")
-        st.markdown(f'<span class="streak-badge">🔥 {profile["streak"]["current"]} jours</span>', unsafe_allow_html=True)
+        st.markdown(f'<span class="streak-badge">🔥 {profile["streak"]["current"]} days</span>', unsafe_allow_html=True)
         level = game.compute_level(profile["xp"])
-        st.metric("Niveau", level, help=f"{profile['xp']} XP au total")
+        st.metric("Level", level, help=f"{profile['xp']} XP total")
         _, xp_left, progress = game.xp_to_next_level(profile["xp"])
         if xp_left is not None:
-            st.progress(progress, text=f"{xp_left} XP avant le niveau {level + 1}")
+            st.progress(progress, text=f"{xp_left} XP to level {level + 1}")
         else:
-            st.progress(1.0, text="Niveau maximum atteint ! 🎉")
-        st.metric("🪙 Pièces", profile["coins"])
-        st.caption(f"Niveau CECR : **{profile['level']}**")
+            st.progress(1.0, text="Max level reached! 🎉")
+        st.metric("🪙 Coins", profile["coins"])
+        st.caption(f"CEFR level: **{profile['level']}**")
         if st.session_state.get("_last_gist_error"):
-            st.caption("⚠️ Sauvegarde persistante indisponible pour le moment (voir Réglages).")
+            st.caption("⚠️ Persistent backup unavailable right now (see Settings).")
 
 
 def show_new_badges(newly: list):
     for b in newly:
         st.balloons()
-        st.success(f"🏅 Nouveau badge débloqué : **{b['emoji']} {b['name']}** -- {b['desc']}")
+        st.success(f"🏅 New badge unlocked: **{b['emoji']} {b['name']}** -- {b['desc']}")
 
 
 def show_level_up(result: dict):
     if result.get("leveled_up"):
         st.balloons()
-        st.success(f"🎉 Niveau supérieur ! Tu es maintenant niveau {result['new_level']} !")
+        st.success(f"🎉 Level up! You're now level {result['new_level']}!")
         if result.get("unlock"):
             st.info(result["unlock"])

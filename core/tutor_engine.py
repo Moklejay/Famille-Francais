@@ -43,7 +43,7 @@ def _cefr_desc(cefr: str) -> str:
 # ===========================================================================
 
 CHAT_SYSTEM_PROMPT = """Tu es un tuteur de français chaleureux, patient et encourageant pour {name}, \
-qui pratique le français au quotidien avec son frère/sa sœur dans le cadre d'un rituel d'immersion. \
+qui pratique le français au quotidien dans le cadre d'un rituel d'immersion personnel. \
 {name} est actuellement au niveau {cefr} du CECR ({cefr_desc}).
 
 RÈGLES STRICTES :
@@ -139,7 +139,7 @@ def respond_roleplay_ai(scenario: dict, user_text: str, cefr: str, name: str, hi
 
 
 STORY_SYSTEM_PROMPT = """Tu es le narrateur ou la narratrice d'une histoire interactive en français pour \
-{name} (niveau {cefr} CECR -- {cefr_desc}), qui l'écrit avec son frère/sa sœur.
+{name} (niveau {cefr} CECR -- {cefr_desc}).
 
 Histoire : {story_title}. Voici ce qui s'est passé jusqu'ici :
 {story_so_far}

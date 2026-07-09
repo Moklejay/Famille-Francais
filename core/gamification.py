@@ -62,7 +62,7 @@ def record_daily_login(profile: dict) -> int:
         # counts toward the "Semaine d'immersion" weekly quest.
         bump_quest_progress(profile, "active_days", amount=1)
     if bonus:
-        award_xp(profile, bonus, f"Bonus de série ({profile['streak']['current']} jours) 🔥")
+        award_xp(profile, bonus, f"Streak bonus ({profile['streak']['current']} days) 🔥")
     return bonus
 
 
@@ -93,9 +93,9 @@ def new_badges(profile: dict) -> list:
     if profile.get("stories_completed"):
         give("storyteller")
     quebec_words_known = sum(
-        1 for wid in profile["vocab_srs"] if (w := cb.vocab_by_id(wid)) and w["theme"] == "Le Québec"
+        1 for wid in profile["vocab_srs"] if (w := cb.vocab_by_id(wid)) and w["theme"] == "Quebec"
     )
-    quebec_words_total = sum(1 for v in cb.VOCAB if v["theme"] == "Le Québec")
+    quebec_words_total = sum(1 for v in cb.VOCAB if v["theme"] == "Quebec")
     if quebec_words_known >= quebec_words_total:
         give("quebec_explorer")
     if profile["vocab_known_count"] >= min(20, len(cb.VOCAB)):
@@ -125,9 +125,8 @@ def _week_index() -> int:
 
 def current_week_str() -> str:
     """Year-qualified ISO week (e.g. '2026-W28') -- the shared key used to
-    decide quest slot rotation AND to check whether an activity happened
-    'this week' (see check_joint_quest). Year-qualified so week 1 of a new
-    year is never confused with week 1 of the previous year."""
+    decide quest slot rotation. Year-qualified so week 1 of a new year is
+    never confused with week 1 of the previous year."""
     iso = date.today().isocalendar()
     return f"{iso[0]}-W{iso[1]}"
 
@@ -138,10 +137,6 @@ def get_todays_daily_quest() -> dict:
 
 def get_this_weeks_weekly_quest() -> dict:
     return cb.QUESTS_WEEKLY[_week_index() % len(cb.QUESTS_WEEKLY)]
-
-
-def get_this_weeks_joint_quest() -> dict:
-    return cb.JOINT_QUESTS[_week_index() % len(cb.JOINT_QUESTS)]
 
 
 def ensure_quest_slots(profile: dict) -> None:
@@ -195,63 +190,10 @@ def bump_quest_progress(profile: dict, kind: str, amount: int = 1, target_value=
             if slot["progress"] >= quest["target"]:
                 slot["done"] = True
         if slot["done"]:
-            award_xp(profile, quest["xp"], f"Quête terminée : {quest['title']}")
+            award_xp(profile, quest["xp"], f"Quest completed: {quest['title']}")
             profile["coins"] += quest["coins"]
             completed.append(quest)
     return completed
 
 
-def mark_scenario_this_week(profile: dict) -> None:
-    """Call whenever a role-play scenario is completed. Used by the
-    'both_scenario' joint quest to check the completion actually happened
-    THIS week, rather than at any point in the profile's whole history."""
-    profile["last_scenario_week"] = current_week_str()
 
-
-def mark_story_active_this_week(profile: dict) -> None:
-    """Call whenever Story Mode progress advances (any new turn, not just a
-    full completion -- the quest description says 'advance', not
-    'finish'). Used by the 'both_story' joint quest the same way as
-    mark_scenario_this_week() above."""
-    profile["last_story_week"] = current_week_str()
-
-
-def check_joint_quest(db: dict) -> dict | None:
-    """
-    Checks whether the current week's joint sibling quest is satisfied by
-    ALL profiles in the family. Returns the quest dict if newly completed.
-
-    IMPORTANT: "satisfied" must mean "did this happen THIS week" -- not
-    "has this ever happened, at any point in this profile's history".
-    both_scenario/both_story check the last_scenario_week/last_story_week
-    markers (stamped by mark_scenario_this_week/mark_story_active_this_week
-    in pages/2 and pages/3) rather than raw cumulative counters, otherwise
-    a single scenario/story turn completed once, ever, would silently
-    auto-complete this "weekly" joint challenge forever after with zero
-    new effort required in any future week.
-    """
-    quest = get_this_weeks_joint_quest()
-    week = current_week_str()
-    already = any(j["quest_id"] == quest["id"] and j["week"] == week for j in db["joint_quests_completed"])
-    if already or len(db["profiles"]) < 2:
-        return None
-
-    def satisfied(profile):
-        if quest["type"] == "both_scenario":
-            return profile.get("last_scenario_week") == week
-        if quest["type"] == "both_story":
-            return profile.get("last_story_week") == week
-        if quest["type"] == "both_streak7":
-            return profile["streak"]["current"] >= 7
-        return False
-
-    if all(satisfied(p) for p in db["profiles"].values()):
-        for name, profile in db["profiles"].items():
-            award_xp(profile, quest["xp"], f"Défi fraternel : {quest['title']}")
-            profile["coins"] += quest["coins"]
-            if "team_player" not in profile["badges"]:
-                profile["badges"].append("team_player")
-        db["joint_quests_completed"].append({"quest_id": quest["id"], "week": week,
-                                              "participants": list(db["profiles"].keys())})
-        return quest
-    return None

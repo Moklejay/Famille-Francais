@@ -16,45 +16,45 @@ import re
 PATTERNS = [
     (r"\bje suis (\d{1,3}) ans\b",
      "j'ai {0} ans",
-     "En français, on utilise AVOIR pour l'âge, pas ÊTRE : on dit « j'ai 20 ans », comme "
-     "« I have 20 years », même si ça sonne bizarre en anglais !"),
+     "In French, you use AVOIR (to have) for age, not ÊTRE (to be): you say « j'ai 20 ans » -- "
+     "literally \"I have 20 years\" -- even though that sounds odd in English!"),
     (r"\bje suis faim\b",
      "j'ai faim",
-     "Pour la faim, on utilise aussi AVOIR : « j'ai faim » (littéralement 'I have hunger')."),
+     "For hunger too, French uses AVOIR: « j'ai faim » (literally \"I have hunger\")."),
     (r"\bje suis soif\b",
      "j'ai soif",
-     "Même chose pour la soif : « j'ai soif », pas « je suis soif »."),
+     "Same for thirst: « j'ai soif », not « je suis soif »."),
     (r"\bje suis chaud\b",
      "j'ai chaud",
-     "Attention : « je suis chaud » a un sens différent en français familier ! Pour parler de "
-     "la température qu'on ressent, dis « j'ai chaud » (I am hot / I feel hot)."),
+     "Careful: « je suis chaud » has a different meaning in casual French! To talk about "
+     "feeling hot, say « j'ai chaud » (I am hot / I feel hot)."),
     (r"\bje suis froid\b",
      "j'ai froid",
-     "Pour dire qu'on a froid, on dit « j'ai froid », avec AVOIR, pas ÊTRE."),
+     "To say you're cold, it's « j'ai froid », with AVOIR, not ÊTRE."),
     (r"\bun fille\b",
      "une fille",
-     "« Fille » est féminin, donc on dit « UNE fille », pas « un fille »."),
+     "« Fille » is feminine, so it's « UNE fille », not « un fille »."),
     (r"\bune garçon\b",
      "un garçon",
-     "« Garçon » est masculin, donc on dit « UN garçon », pas « une garçon »."),
+     "« Garçon » is masculine, so it's « UN garçon », not « une garçon »."),
     (r"\bje veux que je\b",
-     "je veux (+ infinitif)",
-     "Quand le sujet est le même dans les deux parties, on n'utilise pas 'que' : « je veux "
-     "partir », pas « je veux que je parte »."),
+     "je veux (+ infinitive)",
+     "When the subject is the same in both parts, you don't use 'que': « je veux "
+     "partir », not « je veux que je parte »."),
     (r"\bactuellement\b",
-     "actuellement = 'currently' (pas 'actually')",
-     "Faux ami classique ! « Actuellement » veut dire 'currently', pas 'actually'. Pour "
-     "'actually', dis plutôt « en fait »."),
+     "actuellement = 'currently' (not 'actually')",
+     "Classic false friend! « Actuellement » means 'currently', not 'actually'. For "
+     "'actually', use « en fait » instead."),
     (r"\bje suis excité\b",
      "j'ai hâte / je suis enthousiaste",
-     "« Je suis excité » peut sonner ambigu en français. Pour l'enthousiasme, préfère « j'ai "
-     "hâte » (I can't wait) ou « je suis enthousiaste »."),
+     "« Je suis excité » can sound ambiguous in French. For enthusiasm, prefer « j'ai "
+     "hâte » (I can't wait) or « je suis enthousiaste »."),
     (r"\bbeaucoup de le\b",
      "beaucoup du",
-     "'de' + 'le' se contracte toujours en 'du' : « beaucoup DU café », pas « beaucoup DE LE café »."),
+     "'de' + 'le' always contracts to 'du': « beaucoup DU café », not « beaucoup DE LE café »."),
     (r"\bje suis d'accord que\b",
      "je suis d'accord (avec ça) / je pense que",
-     "« Je suis d'accord » s'utilise souvent seul ou avec 'avec' : « je suis d'accord avec toi »."),
+     "« Je suis d'accord » is often used alone or with 'avec': « je suis d'accord avec toi »."),
 ]
 
 _COMPILED = [(re.compile(p, re.IGNORECASE), fix, why) for p, fix, why in PATTERNS]
