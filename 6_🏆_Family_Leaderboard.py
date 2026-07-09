@@ -1,101 +1,78 @@
 """
-Page: Chat Tutor -- free-form conversation with the French tutor. Uses
-real Claude API conversation when a key is configured (Settings page),
-and transparently falls back to the offline rule-based engine otherwise.
+Page: Vocab Review -- spaced-repetition flashcards (SM-2 lite). This is
+the "active recall + spaced repetition" pillar: words you know well come
+back less often, shaky words come back sooner.
 """
 
-from datetime import date
+import random
 import streamlit as st
-from core import ui, gamification as game, tutor_engine, content_bank as cb, ai_client
+from core import ui, gamification as game, srs, content_bank as cb
 
-st.set_page_config(page_title="Chat Tutor", page_icon="💬", layout="wide")
+st.set_page_config(page_title="Vocab Review", page_icon="🧠", layout="wide")
 ui.init_app_state()
 profile = ui.require_profile()
 ui.sidebar_switcher()
 name = st.session_state.active_profile
 
-st.title("💬 Chat Tutor")
-st.caption("Réponds comme tu peux -- l'important, c'est d'essayer !")
+st.title("🧠 Vocab Review")
+st.caption("Cards in context -- not just isolated words -- to lock vocabulary into memory.")
 
-with st.sidebar:
-    st.markdown("---")
-    if ai_client.is_configured():
-        st.success(f"🤖 IA activée ({ai_client.get_model()})")
-    else:
-        st.warning("📴 Mode hors-ligne (aucune clé API)")
-        st.caption("Ajoute une clé dans **Réglages** pour une conversation vraiment adaptative.")
-    st.markdown("### 💡 Astuce grammaire du jour")
-    tips = cb.GRAMMAR_TIPS.get(profile["level"], cb.GRAMMAR_TIPS["A1"])
-    tip_title, tip_body = tips[date.today().toordinal() % len(tips)]
-    st.markdown(f"**{tip_title}**")
-    st.caption(tip_body)
+queue_key = f"vocab_queue_{name}"
+idx_key = f"vocab_idx_{name}"
+reveal_key = f"vocab_reveal_{name}"
 
-hist_key = f"chat_history_{name}"
-last_prompt_key = f"last_prompt_{name}"
-celebration_key = f"celebration_{name}"
+if queue_key not in st.session_state:
+    st.session_state[queue_key] = srs.due_cards(profile, limit=12)
+    st.session_state[idx_key] = 0
+    st.session_state[reveal_key] = False
 
-if hist_key not in st.session_state:
-    opening = tutor_engine.opening_line(profile["level"], name)
-    st.session_state[hist_key] = [{"role": "assistant", "content": opening}]
-    st.session_state[last_prompt_key] = opening
-
-# Show any celebration queued from the previous turn (level-up, badge, quest)
-pending = st.session_state.pop(celebration_key, None)
-if pending:
-    if pending.get("ai_error"):
-        st.info("ℹ️ L'IA n'a pas répondu cette fois (voir détail ci-dessous) -- réponse hors-ligne utilisée à la place.")
-        with st.expander("Détail technique"):
-            st.code(pending["ai_error"])
-    ui.show_level_up(pending["xp_result"])
-    ui.show_new_badges(pending["newly"])
-    for q in pending["quests"]:
-        st.success(f"🎯 Quête terminée : **{q['title']}** ! +{q['xp']} XP, +{q['coins']} pièces.")
-
-for msg in st.session_state[hist_key]:
-    with st.chat_message(msg["role"], avatar=(profile["avatar"] if msg["role"] == "user" else "🇫🇷")):
-        st.markdown(msg["content"])
-        if msg.get("hint_en"):
-            st.caption(f"💭 {msg['hint_en']}")
-        if msg.get("new_vocab"):
-            st.caption("🆕 " + " • ".join(f"**{v['fr']}** ({v['en']})" for v in msg["new_vocab"]))
-        if msg.get("corrections"):
-            with st.container(border=True):
-                st.markdown("**✏️ Petite remarque amicale :**")
-                for c in msg["corrections"]:
-                    st.markdown(f"- Tu as écrit *« {c['matched']} »* → on dirait plutôt **« {c['suggestion']} »**")
-                    st.caption(c["explanation"])
-
-user_text = st.chat_input("Écris ta réponse en français...")
-
-if user_text:
-    st.session_state[hist_key].append({"role": "user", "content": user_text})
-
-    # Plain-text history (no metadata) for the AI's conversational context
-    plain_history = [{"role": m["role"], "content": m["content"]} for m in st.session_state[hist_key][:-1]]
-
-    result = tutor_engine.respond(
-        user_text, profile["level"], name=name, history=plain_history,
-        last_prompt=st.session_state.get(last_prompt_key),
-    )
-
-    profile["messages_sent"] += 1
-    xp_result = game.award_xp(profile, 3, "Message envoyé dans le Chat")
-    quest_done = game.bump_quest_progress(profile, "chat_count", amount=1)
-
-    if result["corrections"]:
-        profile["corrections_seen"] += len(result["corrections"])
-
-    st.session_state[hist_key].append({
-        "role": "assistant", "content": result["reply"],
-        "hint_en": result.get("hint_en"), "corrections": result["corrections"],
-        "new_vocab": result.get("new_vocab", []),
-    })
-    st.session_state[last_prompt_key] = result["reply"]
-
-    newly = game.new_badges(profile)
-    st.session_state[celebration_key] = {
-        "xp_result": xp_result, "newly": newly, "quests": quest_done,
-        "ai_error": result.get("ai_error"),
-    }
-    ui.save()
+if st.button("🔄 New review session"):
+    st.session_state[queue_key] = srs.due_cards(profile, limit=12)
+    st.session_state[idx_key] = 0
+    st.session_state[reveal_key] = False
     st.rerun()
+
+queue = st.session_state[queue_key]
+idx = st.session_state[idx_key]
+
+st.progress(min(1.0, idx / max(1, len(queue))), text=f"Card {min(idx + 1, len(queue))} / {len(queue)}")
+
+if not queue or idx >= len(queue):
+    st.success("✅ No more cards to review for now -- come back later, or change your CEFR level "
+               "in Settings to unlock more vocabulary!")
+    st.stop()
+
+word = queue[idx]
+
+with st.container(border=True):
+    st.markdown(f"## {word['fr']}")
+    st.caption(f"Theme: {word['theme']} • Level {word['cefr']}")
+    if not st.session_state[reveal_key]:
+        if st.button("👁️ Reveal translation", type="primary"):
+            st.session_state[reveal_key] = True
+            st.rerun()
+    else:
+        st.markdown(f"**Translation:** {word['en']}")
+        st.markdown(f"*« {word['ex_fr']} »*")
+        st.caption(word["ex_en"])
+
+        st.write("Did you know this word?")
+        cols = st.columns(4)
+        grade_labels = [("😵 Forgot", 0), ("😅 Hard", 3), ("🙂 Good", 4), ("😎 Easy", 5)]
+        for col, (label, quality) in zip(cols, grade_labels):
+            if col.button(label, key=f"grade_{word['id']}_{quality}"):
+                srs.grade_card(profile, word["id"], quality)
+                xp = 2 if quality >= 3 else 1
+                game.award_xp(profile, xp, f"Review: {word['fr']}")
+                game.bump_quest_progress(profile, "vocab_review", amount=1)
+                if quality >= 3 and word["theme"] == "Quebec":
+                    game.bump_quest_progress(profile, "vocab_theme", amount=1)
+                newly = game.new_badges(profile)
+                st.session_state[idx_key] += 1
+                st.session_state[reveal_key] = False
+                ui.save()
+                ui.show_new_badges(newly)
+                st.rerun()
+
+st.divider()
+st.caption(f"📚 Total words mastered: **{profile['vocab_known_count']}**")

@@ -38,8 +38,8 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 CONFIG_FILE = os.path.join(DATA_DIR, "ai_config.json")
 
 MODELS = {
-    "Claude Haiku 4.5 (rapide, économique -- recommandé)": "claude-haiku-4-5-20251001",
-    "Claude Sonnet 5 (plus riche, un peu plus lent)": "claude-sonnet-5",
+    "Claude Haiku 4.5 (fast, affordable -- recommended)": "claude-haiku-4-5-20251001",
+    "Claude Sonnet 5 (richer, a bit slower)": "claude-sonnet-5",
 }
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 
@@ -147,12 +147,12 @@ def chat_json(system_prompt: str, messages: list, max_tokens: int = 700) -> dict
     """
     api_key = get_api_key()
     if not api_key:
-        raise RuntimeError("Aucune clé API configurée.")
+        raise RuntimeError("No API key configured.")
 
     try:
         import anthropic
     except ImportError as e:
-        raise RuntimeError("Le package 'anthropic' n'est pas installé (pip install anthropic).") from e
+        raise RuntimeError("The 'anthropic' package isn't installed (pip install anthropic).") from e
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
@@ -165,7 +165,7 @@ def chat_json(system_prompt: str, messages: list, max_tokens: int = 700) -> dict
         text = "".join(block.text for block in resp.content if hasattr(block, "text"))
         return _extract_json(text)
     except Exception as e:  # noqa: BLE001 -- deliberately broad: any failure -> fallback
-        raise RuntimeError(f"Erreur d'appel à l'API Claude : {e}") from e
+        raise RuntimeError(f"Error calling the Claude API: {e}") from e
 
 
 def test_connection() -> tuple[bool, str]:
@@ -177,7 +177,7 @@ def test_connection() -> tuple[bool, str]:
             max_tokens=20,
         )
         if result.get("ok"):
-            return True, f"Connexion réussie avec le modèle {get_model()} !"
-        return False, f"Réponse inattendue du modèle : {result}"
+            return True, f"Connection successful with model {get_model()}!"
+        return False, f"Unexpected response from the model: {result}"
     except RuntimeError as e:
         return False, str(e)

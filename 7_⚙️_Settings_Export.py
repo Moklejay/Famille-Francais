@@ -1,161 +1,101 @@
 """
-Page: Roleplay Scenarios -- real-life dialogues (café, directions, market,
-meeting a friend). When a Claude API key is configured, the tutor
-improvises the scene live and in character; otherwise it falls back to a
-scripted dialogue tree so the app still works offline.
+Page: Chat Tutor -- free-form conversation with the French tutor. Uses
+real Claude API conversation when a key is configured (Settings page),
+and transparently falls back to the offline rule-based engine otherwise.
 """
 
+from datetime import date
 import streamlit as st
-from core import ui, gamification as game, content_bank as cb, tutor_engine, ai_client
+from core import ui, gamification as game, tutor_engine, content_bank as cb, ai_client
 
-st.set_page_config(page_title="Jeux de rôle", page_icon="🎭", layout="wide")
+st.set_page_config(page_title="Chat Tutor", page_icon="💬", layout="wide")
 ui.init_app_state()
 profile = ui.require_profile()
 ui.sidebar_switcher()
 name = st.session_state.active_profile
 
-st.title("🎭 Jeux de rôle")
-st.caption("Vis une petite scène en français, comme si tu y étais vraiment.")
+st.title("💬 Chat Tutor")
+st.caption("Answer however you can -- what matters is trying!")
 
-ai_mode = ai_client.is_configured()
 with st.sidebar:
     st.markdown("---")
-    st.success(f"🤖 Improvisation IA ({ai_client.get_model()})") if ai_mode else \
-        st.warning("📴 Mode scénario scripté (aucune clé API)")
-
-scenario_ids = list(cb.SCENARIOS.keys())
-labels = [f"{cb.SCENARIOS[sid]['title']}  ({cb.SCENARIOS[sid]['cefr']})" for sid in scenario_ids]
-choice = st.selectbox("Choisis une scène :", options=list(range(len(scenario_ids))),
-                       format_func=lambda i: labels[i])
-scenario_id = scenario_ids[choice]
-scenario = cb.SCENARIOS[scenario_id]
-st.info(scenario["description"])
-
-# ===========================================================================
-# AI-DRIVEN MODE
-# ===========================================================================
-if ai_mode:
-    hist_key = f"roleplay_ai_hist_{name}_{scenario_id}"
-    ended_key = f"roleplay_ai_ended_{name}_{scenario_id}"
-
-    if hist_key not in st.session_state:
-        opening = scenario["nodes"][scenario["start"]]["bot_fr"]
-        st.session_state[hist_key] = [{"role": "assistant", "content": opening}]
-        st.session_state[ended_key] = False
-
-    if st.button("🔄 Recommencer cette scène"):
-        opening = scenario["nodes"][scenario["start"]]["bot_fr"]
-        st.session_state[hist_key] = [{"role": "assistant", "content": opening}]
-        st.session_state[ended_key] = False
-        st.rerun()
-
-    for msg in st.session_state[hist_key]:
-        with st.chat_message(msg["role"], avatar=(profile["avatar"] if msg["role"] == "user" else "🇫🇷")):
-            st.markdown(msg["content"])
-            if msg.get("hint_en"):
-                st.caption(f"💭 {msg['hint_en']}")
-            if msg.get("corrections"):
-                with st.container(border=True):
-                    st.markdown("**✏️ Petite remarque amicale :**")
-                    for c in msg["corrections"]:
-                        st.markdown(f"- *« {c['matched']} »* → **« {c['suggestion']} »**")
-                        st.caption(c["explanation"])
-
-    if st.session_state[ended_key]:
-        st.success("✅ Scène terminée ! Choisis une autre scène ou recommence celle-ci.")
+    if ai_client.is_configured():
+        st.success(f"🤖 AI enabled ({ai_client.get_model()})")
     else:
-        user_reply = st.chat_input("Réponds dans la scène...")
-        if user_reply:
-            st.session_state[hist_key].append({"role": "user", "content": user_reply})
-            plain_history = [{"role": m["role"], "content": m["content"]} for m in st.session_state[hist_key][:-1]]
-            try:
-                result = tutor_engine.respond_roleplay_ai(scenario, user_reply, profile["level"], name, plain_history)
-                st.session_state[hist_key].append({
-                    "role": "assistant", "content": result["reply"],
-                    "hint_en": result.get("hint_en"), "corrections": result["corrections"],
-                })
-                xp_result = game.award_xp(profile, 10, f"Jeu de rôle (IA) : {scenario['title']}")
-                if result["corrections"]:
-                    profile["corrections_seen"] += len(result["corrections"])
-                if result["scene_ended"]:
-                    st.session_state[ended_key] = True
-                    game.award_xp(profile, 15, f"Scène terminée : {scenario['title']}")
-                    if scenario_id not in profile["scenarios_completed"]:
-                        profile["scenarios_completed"].append(scenario_id)
-                    game.bump_quest_progress(profile, "scenario", target_value=scenario_id)
-                    game.bump_quest_progress(profile, "scenario_count", target_value=scenario_id)
-                newly = game.new_badges(profile)
-                ui.save()
-                ui.show_new_badges(newly)
-                st.rerun()
-            except RuntimeError as e:
-                st.session_state[hist_key].pop()  # remove the unanswered user turn
-                st.warning("L'IA n'a pas pu répondre cette fois -- réessaie dans un instant.")
-                with st.expander("Détail technique"):
-                    st.code(str(e))
+        st.warning("📴 Offline mode (no API key)")
+        st.caption("Add a key in **Settings** for truly adaptive conversation.")
+    st.markdown("### 💡 Grammar tip of the day")
+    tips = cb.GRAMMAR_TIPS.get(profile["level"], cb.GRAMMAR_TIPS["A1"])
+    tip_title, tip_body = tips[date.today().toordinal() % len(tips)]
+    st.markdown(f"**{tip_title}**")
+    st.caption(tip_body)
 
-# ===========================================================================
-# OFFLINE SCRIPTED FALLBACK (dialogue tree)
-# ===========================================================================
-else:
-    node_key = f"scenario_node_{name}_{scenario_id}"
-    if node_key not in st.session_state:
-        st.session_state[node_key] = scenario["start"]
+hist_key = f"chat_history_{name}"
+last_prompt_key = f"last_prompt_{name}"
+celebration_key = f"celebration_{name}"
 
-    if st.button("🔄 Recommencer cette scène"):
-        st.session_state[node_key] = scenario["start"]
-        st.rerun()
+if hist_key not in st.session_state:
+    opening = tutor_engine.opening_line(profile["level"], name)
+    st.session_state[hist_key] = [{"role": "assistant", "content": opening}]
+    st.session_state[last_prompt_key] = opening
 
-    current_node_id = st.session_state[node_key]
+# Show any celebration queued from the previous turn (level-up, badge, quest)
+pending = st.session_state.pop(celebration_key, None)
+if pending:
+    if pending.get("ai_error"):
+        st.info("ℹ️ The AI didn't respond this time (see details below) -- offline reply used instead.")
+        with st.expander("Technical detail"):
+            st.code(pending["ai_error"])
+    ui.show_level_up(pending["xp_result"])
+    ui.show_new_badges(pending["newly"])
+    for q in pending["quests"]:
+        st.success(f"🎯 Quest completed: **{q['title']}**! +{q['xp']} XP, +{q['coins']} coins.")
 
-    if current_node_id is None:
-        st.success("✅ Scène terminée ! Choisis une autre scène ou reviens plus tard pour une nouvelle histoire.")
-        st.stop()
+for msg in st.session_state[hist_key]:
+    with st.chat_message(msg["role"], avatar=(profile["avatar"] if msg["role"] == "user" else "🇫🇷")):
+        st.markdown(msg["content"])
+        if msg.get("hint_en"):
+            st.caption(f"💭 {msg['hint_en']}")
+        if msg.get("new_vocab"):
+            st.caption("🆕 " + " • ".join(f"**{v['fr']}** ({v['en']})" for v in msg["new_vocab"]))
+        if msg.get("corrections"):
+            with st.container(border=True):
+                st.markdown("**✏️ Friendly note:**")
+                for c in msg["corrections"]:
+                    st.markdown(f"- You wrote *« {c['matched']} »* → it's more natural as **« {c['suggestion']} »**")
+                    st.caption(c["explanation"])
 
-    node = scenario["nodes"][current_node_id]
+user_text = st.chat_input("Write your reply in French...")
 
-    with st.chat_message("assistant", avatar="🇫🇷"):
-        st.markdown(f"### {node['bot_fr']}")
-        st.caption(f"💭 {node['bot_en']}")
+if user_text:
+    st.session_state[hist_key].append({"role": "user", "content": user_text})
 
-    if node["examples"]:
-        with st.expander("💡 Besoin d'idées ? Exemples de réponses"):
-            for ex in node["examples"]:
-                st.markdown(f"- *{ex}*")
+    # Plain-text history (no metadata) for the AI's conversational context
+    plain_history = [{"role": m["role"], "content": m["content"]} for m in st.session_state[hist_key][:-1]]
 
-    if node["keywords"]:
-        user_reply = st.chat_input("Réponds dans la scène...")
-        if user_reply:
-            matched = any(kw.lower() in user_reply.lower() for kw in node["keywords"])
-            if matched:
-                game.award_xp(profile, node["xp"], f"Jeu de rôle : {scenario['title']}")
-                st.session_state[node_key] = node["next"]
-                if node["next"] is None:
-                    if scenario_id not in profile["scenarios_completed"]:
-                        profile["scenarios_completed"].append(scenario_id)
-                    game.bump_quest_progress(profile, "scenario", target_value=scenario_id)
-                    game.bump_quest_progress(profile, "scenario_count", target_value=scenario_id)
-                newly = game.new_badges(profile)
-                ui.save()
-                st.toast(f"+{node['xp']} XP !", icon="✨")
-                st.rerun()
-            else:
-                st.warning("Presque ! Essaie d'utiliser un des mots suggérés ci-dessus, ou clique "
-                           "« Continuer quand même » si tu veux avancer.")
-                if st.button("Continuer quand même ➡️"):
-                    st.session_state[node_key] = node["next"]
-                    ui.save()
-                    st.rerun()
-    else:
-        if st.button("Terminer la scène 🎉"):
-            result = game.award_xp(profile, node["xp"], f"Jeu de rôle terminé : {scenario['title']}")
-            if scenario_id not in profile["scenarios_completed"]:
-                profile["scenarios_completed"].append(scenario_id)
-            game.bump_quest_progress(profile, "scenario", target_value=scenario_id)
-            game.bump_quest_progress(profile, "scenario_count", target_value=scenario_id)
-            newly = game.new_badges(profile)
-            st.session_state[node_key] = None
-            ui.save()
-            ui.show_level_up(result)
-            ui.show_new_badges(newly)
-            st.rerun()
+    result = tutor_engine.respond(
+        user_text, profile["level"], name=name, history=plain_history,
+        last_prompt=st.session_state.get(last_prompt_key),
+    )
+
+    profile["messages_sent"] += 1
+    xp_result = game.award_xp(profile, 3, "Message sent in Chat")
+    quest_done = game.bump_quest_progress(profile, "chat_count", amount=1)
+
+    if result["corrections"]:
+        profile["corrections_seen"] += len(result["corrections"])
+
+    st.session_state[hist_key].append({
+        "role": "assistant", "content": result["reply"],
+        "hint_en": result.get("hint_en"), "corrections": result["corrections"],
+        "new_vocab": result.get("new_vocab", []),
+    })
+    st.session_state[last_prompt_key] = result["reply"]
+
+    newly = game.new_badges(profile)
+    st.session_state[celebration_key] = {
+        "xp_result": xp_result, "newly": newly, "quests": quest_done,
+        "ai_error": result.get("ai_error"),
+    }
+    ui.save()
+    st.rerun()

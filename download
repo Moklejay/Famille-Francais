@@ -62,7 +62,7 @@ def record_daily_login(profile: dict) -> int:
         # counts toward the "Semaine d'immersion" weekly quest.
         bump_quest_progress(profile, "active_days", amount=1)
     if bonus:
-        award_xp(profile, bonus, f"Bonus de série ({profile['streak']['current']} jours) 🔥")
+        award_xp(profile, bonus, f"Streak bonus ({profile['streak']['current']} days) 🔥")
     return bonus
 
 
@@ -93,9 +93,9 @@ def new_badges(profile: dict) -> list:
     if profile.get("stories_completed"):
         give("storyteller")
     quebec_words_known = sum(
-        1 for wid in profile["vocab_srs"] if (w := cb.vocab_by_id(wid)) and w["theme"] == "Le Québec"
+        1 for wid in profile["vocab_srs"] if (w := cb.vocab_by_id(wid)) and w["theme"] == "Quebec"
     )
-    quebec_words_total = sum(1 for v in cb.VOCAB if v["theme"] == "Le Québec")
+    quebec_words_total = sum(1 for v in cb.VOCAB if v["theme"] == "Quebec")
     if quebec_words_known >= quebec_words_total:
         give("quebec_explorer")
     if profile["vocab_known_count"] >= min(20, len(cb.VOCAB)):
@@ -190,7 +190,7 @@ def bump_quest_progress(profile: dict, kind: str, amount: int = 1, target_value=
             if slot["progress"] >= quest["target"]:
                 slot["done"] = True
         if slot["done"]:
-            award_xp(profile, quest["xp"], f"Quête terminée : {quest['title']}")
+            award_xp(profile, quest["xp"], f"Quest completed: {quest['title']}")
             profile["coins"] += quest["coins"]
             completed.append(quest)
     return completed
