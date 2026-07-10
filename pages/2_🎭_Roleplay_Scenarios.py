@@ -6,7 +6,7 @@ scripted dialogue tree so the app still works offline.
 """
 
 import streamlit as st
-from core import ui, gamification as game, content_bank as cb, tutor_engine, ai_client
+from core import ui, gamification as game, content_bank as cb, tutor_engine, ai_client, voice
 
 st.set_page_config(page_title="Role-play", page_icon="🎭", layout="wide")
 ui.init_app_state()
@@ -15,7 +15,7 @@ ui.sidebar_switcher()
 name = st.session_state.active_profile
 
 st.title("🎭 Role-play")
-st.caption("Live out a little scene in French, as if you were really there.")
+st.caption("Live out a little scene in French, as if you were really there. Type or use the mic 🎤.")
 
 ai_mode = ai_client.is_configured()
 with st.sidebar:
@@ -49,9 +49,11 @@ if ai_mode:
         st.session_state[ended_key] = False
         st.rerun()
 
-    for msg in st.session_state[hist_key]:
+    for i, msg in enumerate(st.session_state[hist_key]):
         with st.chat_message(msg["role"], avatar=(profile["avatar"] if msg["role"] == "user" else "🇫🇷")):
             st.markdown(msg["content"])
+            if msg["role"] == "assistant":
+                voice.speak_button(msg["content"], key=f"roleplay_ai_{name}_{scenario_id}_{i}")
             if msg.get("hint_en"):
                 st.caption(f"💭 {msg['hint_en']}")
             if msg.get("corrections"):
@@ -64,7 +66,10 @@ if ai_mode:
     if st.session_state[ended_key]:
         st.success("✅ Scene complete! Pick another scene or restart this one.")
     else:
-        user_reply = st.chat_input("Reply in the scene...")
+        mic_col, _ = st.columns([1, 8])
+        with mic_col:
+            mic_text = voice.mic_input(f"roleplay_ai_mic_{name}_{scenario_id}") if voice.mic_available() else None
+        user_reply = mic_text or st.chat_input("Reply in the scene...")
         if user_reply:
             st.session_state[hist_key].append({"role": "user", "content": user_reply})
             plain_history = [{"role": m["role"], "content": m["content"]} for m in st.session_state[hist_key][:-1]]
@@ -116,6 +121,7 @@ else:
 
     with st.chat_message("assistant", avatar="🇫🇷"):
         st.markdown(f"### {node['bot_fr']}")
+        voice.speak_button(node["bot_fr"], key=f"roleplay_node_{name}_{scenario_id}_{current_node_id}")
         st.caption(f"💭 {node['bot_en']}")
 
     if node["examples"]:
@@ -124,7 +130,10 @@ else:
                 st.markdown(f"- *{ex}*")
 
     if node["keywords"]:
-        user_reply = st.chat_input("Reply in the scene...")
+        mic_col, _ = st.columns([1, 8])
+        with mic_col:
+            mic_text = voice.mic_input(f"roleplay_node_mic_{name}_{scenario_id}_{current_node_id}") if voice.mic_available() else None
+        user_reply = mic_text or st.chat_input("Reply in the scene...")
         if user_reply:
             matched = any(kw.lower() in user_reply.lower() for kw in node["keywords"])
             if matched:
@@ -141,7 +150,7 @@ else:
                 st.rerun()
             else:
                 st.warning("Almost! Try using one of the suggested words above, or click "
-                           "\"Continue anyway\" if you want to move on.")
+                            "\"Continue anyway\" if you want to move on.")
                 if st.button("Continue anyway ➡️"):
                     st.session_state[node_key] = node["next"]
                     ui.save()
