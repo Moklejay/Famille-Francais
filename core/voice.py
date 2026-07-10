@@ -1,29 +1,47 @@
 """
 voice.py
 --------
-Voice input/output helpers shared by Chat Tutor, Roleplay Scenarios, and
-Story Mode.
+Voice for Chat Tutor, Roleplay Scenarios, and Story Mode.
 
-STT (speak to the app): uses the `streamlit_mic_recorder` component's
-`speech_to_text()` helper, which wraps the browser's native Web Speech
-API (SpeechRecognition). No API key, no server-side audio processing --
-recognition happens in the visitor's own browser (Chrome/Edge support it
-well; Safari/Firefox support is partial, so we always keep the text input
-as a fallback right next to the mic button).
+Two modes are offered:
 
-TTS (hear the tutor reply): uses the browser's native `speechSynthesis`,
-injected via `st.components.v1.html`. Also fully client-side, free, no
-extra package needed for this half.
+1. Conversation mode (conversation_toggle + conversation_loop) -- the
+   real "feels like a conversation" experience: turn it on once, then
+   the page listens, waits for a natural pause in your speech to
+   auto-send what you said (no "stop recording" click), reads the
+   tutor's reply out loud automatically, and starts listening again on
+   its own. This is built on the browser's native Web Speech API
+   (SpeechRecognition + speechSynthesis) rather than a button-based
+   recorder component, specifically because SpeechRecognition has
+   built-in silence detection ("endpointing"): it stops itself the
+   moment you stop talking, which is exactly the turn-taking behaviour
+   a conversation needs and a manual start/stop button can't give you.
 
-Both are best-effort: if the visitor's browser doesn't support the Web
-Speech API, the mic button will simply show nothing to transcribe, and
-the "listen" button will silently no-op. Every page keeps its existing
-text input/chat log fully working either way -- voice is additive, not a
-replacement path.
+2. Manual mode (mic_input + speak_button) -- a click-based fallback for
+   browsers/situations where the hands-free loop doesn't work well
+   (e.g. Safari's limited SpeechRecognition support, noisy rooms, or
+   just personal preference). Always available side-by-side with typing.
+
+Neither mode requires an API key or sends audio anywhere -- both speech
+recognition and speech synthesis run entirely in the visitor's browser.
+
+Implementation note on conversation mode: Streamlit's Python side has no
+way to be "pushed" a value the instant speech is recognized -- a rerun
+only happens when a real widget changes. So conversation_loop() injects
+a small script (via st.components.v1.html) that reaches into the
+*parent* document (the actual app page, one level up from the tiny
+helper iframe) and drives Streamlit's own chat input for us: it fills
+the real textarea with the recognized text and clicks the real send
+button, so from Streamlit's perspective a voice turn looks exactly like
+the person typed a message and hit Enter. A sessionStorage guard keyed
+by a "turn id" (typically the running message count) makes sure each
+new message only triggers speak-then-listen once, not on every
+unrelated Streamlit rerun (switching profiles, sidebar clicks, etc).
 """
 
 from __future__ import annotations
 import html
+import json
 import streamlit as st
 
 try:
@@ -34,24 +52,146 @@ except ImportError:
 
 
 def mic_available() -> bool:
-    """Whether the streamlit-mic-recorder package is installed. Pages use
-    this to decide whether to show the mic button at all (it should
-    always be True once requirements.txt is deployed, but this keeps the
-    page from crashing if a dependency install is ever mid-flight)."""
+    """Whether the streamlit-mic-recorder package (used by manual mode)
+    is installed."""
     return _MIC_AVAILABLE
 
 
-def mic_input(key: str, lang: str = "fr-FR") -> str | None:
-    """
-    Renders a small round mic button. While recording, the button pulses;
-    on stop, the browser's speech recognizer transcribes what was said
-    and this returns the resulting French text (None if nothing new was
-    transcribed since the last call).
+# ---------------------------------------------------------------------------
+# Conversation mode -- hands-free, silence-triggered turn-taking
+# ---------------------------------------------------------------------------
 
-    key: a unique widget key per call site (e.g. "chat_tutor_mic",
-    "roleplay_mic_<scenario_id>", "story_mic_<story_id>") -- must be
-    unique per page/context or Streamlit will collide widget state.
+def conversation_toggle(key: str, label: str = "🎙️ Conversation mode (hands-free)") -> bool:
     """
+    A single on/off switch. When on, a page should hide its manual
+    mic/listen controls and call conversation_loop() every rerun
+    instead. Persists via Streamlit's own widget state.
+    """
+    return st.toggle(label, key=key)
+
+
+def conversation_loop(
+    turn_id: str,
+    conv_key: str,
+    speak_text: str | None,
+    lang: str = "fr-FR",
+    chat_input_selector: str = '[data-testid="stChatInput"] textarea',
+):
+    """
+    Drives one turn of the hands-free loop. Call every rerun while
+    conversation mode is on for that page.
+
+    turn_id: changes exactly when a new message/turn has appeared
+        (e.g. str(len(history)), or a node/chapter id) -- used so each
+        turn only auto-speaks/auto-listens once, even though Streamlit
+        may rerun the script for unrelated reasons.
+    conv_key: a stable key namespacing this conversation (e.g.
+        f"chat_tutor_{profile_name}") so different pages/profiles don't
+        collide in sessionStorage.
+    speak_text: the latest tutor/narrator line to read aloud before
+        listening for the reply, or None to skip straight to listening
+        (nothing new to say yet).
+    """
+    payload = json.dumps({
+        "turnId": str(turn_id),
+        "storageKey": f"ff_conv_{conv_key}",
+        "speakText": speak_text or "",
+        "lang": lang,
+        "inputSelector": chat_input_selector,
+    })
+    st.components.v1.html(
+        f"""
+        <div id="ff-voice-status" style="font-family:'Inter',sans-serif;font-size:0.8rem;color:#B3B3B3;padding:2px 0;"></div>
+        <script>
+        (function() {{
+            const cfg = {payload};
+            const pdoc = window.parent.document;
+            const pwin = window.parent;
+            const already = sessionStorage.getItem(cfg.storageKey) === cfg.turnId;
+            if (already) return;
+            sessionStorage.setItem(cfg.storageKey, cfg.turnId);
+
+            function setStatus(text) {{
+                const el = document.getElementById('ff-voice-status');
+                if (el) el.textContent = text;
+            }}
+
+            function submitText(text) {{
+                const ta = pdoc.querySelector(cfg.inputSelector);
+                if (!ta) {{ setStatus('⚠️ Could not find the message box.'); return; }}
+                const setter = Object.getOwnPropertyDescriptor(pwin.HTMLTextAreaElement.prototype, 'value').set;
+                setter.call(ta, text);
+                ta.dispatchEvent(new pwin.Event('input', {{bubbles: true}}));
+                setTimeout(function() {{
+                    const btn = pdoc.querySelector('[data-testid="stChatInputSubmitButton"]');
+                    if (btn && !btn.disabled) {{
+                        btn.click();
+                    }} else {{
+                        ta.dispatchEvent(new pwin.KeyboardEvent('keydown', {{key: 'Enter', code: 'Enter', bubbles: true}}));
+                    }}
+                }}, 150);
+            }}
+
+            function startListening() {{
+                const SR = pwin.webkitSpeechRecognition || pwin.SpeechRecognition;
+                if (!SR) {{ setStatus('🎙️ Voice not supported in this browser -- type your reply instead.'); return; }}
+                setStatus('🎙️ Listening -- speak, then just pause when you\\'re done...');
+                let rec;
+                try {{ rec = new SR(); }} catch (err) {{ setStatus('⚠️ Mic unavailable: ' + err); return; }}
+                rec.lang = cfg.lang;
+                rec.continuous = false;
+                rec.interimResults = false;
+                rec.maxAlternatives = 1;
+                rec.onresult = function(e) {{
+                    const text = e.results[0][0].transcript;
+                    if (text && text.trim()) {{
+                        setStatus('✅ Sending: “' + text + '”');
+                        submitText(text.trim());
+                    }}
+                }};
+                rec.onerror = function(e) {{
+                    if (e.error === 'no-speech' || e.error === 'audio-capture') {{
+                        setTimeout(startListening, 300);
+                    }} else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {{
+                        setStatus('⚠️ Microphone blocked -- allow mic access for this site, then toggle conversation mode off and on again.');
+                    }} else {{
+                        setStatus('⚠️ ' + e.error + ' -- retrying...');
+                        setTimeout(startListening, 800);
+                    }}
+                }};
+                try {{ rec.start(); }} catch (err) {{ setTimeout(startListening, 500); }}
+            }}
+
+            if (cfg.speakText && ('speechSynthesis' in pwin)) {{
+                setStatus('🔊 Speaking...');
+                pwin.speechSynthesis.cancel();
+                const utter = new pwin.SpeechSynthesisUtterance(cfg.speakText);
+                utter.lang = cfg.lang;
+                utter.rate = 0.95;
+                const voices = pwin.speechSynthesis.getVoices();
+                const wanted = cfg.lang.slice(0, 2).toLowerCase();
+                const frVoice = voices.find(function(v) {{ return v.lang && v.lang.toLowerCase().indexOf(wanted) === 0; }});
+                if (frVoice) utter.voice = frVoice;
+                utter.onend = startListening;
+                utter.onerror = startListening;
+                pwin.speechSynthesis.speak(utter);
+            }} else {{
+                startListening();
+            }}
+        }})();
+        </script>
+        """,
+        height=26,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Manual mode -- click-based fallback, always available
+# ---------------------------------------------------------------------------
+
+def mic_input(key: str, lang: str = "fr-FR") -> str | None:
+    """Renders a small round mic button (manual start/stop). Returns the
+    transcribed French text once, or None."""
     if not _MIC_AVAILABLE:
         return None
     text = speech_to_text(
@@ -66,20 +206,9 @@ def mic_input(key: str, lang: str = "fr-FR") -> str | None:
 
 
 def speak_button(text: str, key: str, lang: str = "fr-FR", label: str = "🔊"):
-    """
-    Renders a tiny inline button that reads `text` aloud in French using
-    the browser's built-in speechSynthesis voice. Picks the best-matching
-    fr-FR (or fr-*) voice available on the visitor's device; falls back
-    to the browser default voice if none is installed.
-
-    Safe against HTML/JS injection: `text` is JSON-escaped before being
-    embedded in the generated script.
-    """
-    import json
+    """Renders a tiny inline button that reads `text` aloud on click."""
     safe_text = json.dumps(text or "")
     safe_lang = json.dumps(lang)
-    # Use a random-ish DOM id per call so multiple buttons on one page
-    # don't collide.
     btn_id = f"speak_{key}".replace("-", "_").replace(" ", "_")
 
     st.components.v1.html(
