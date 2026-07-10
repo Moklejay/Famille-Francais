@@ -7,6 +7,14 @@ widgets, and small celebration helpers used across every page.
 Also owns the "safe save" pattern (see save() below) that lets multiple
 people use the hosted app from separate devices at the same time without
 one of them silently overwriting another's progress.
+
+DESIGN SYSTEM NOTE: the app uses a single dark, "premium app" shell
+(near-black surfaces, card elevation, bold rounded typography) inspired by
+modern media apps like Spotify. The four THEMES below no longer swap the
+whole page to a pastel background -- instead each one is an accent color
+(buttons, active nav, progress bars, badges) layered on the same dark
+shell, so the existing level-gated "unlock a theme" reward system keeps
+working exactly as before, it just changes an accent instead of a mood.
 """
 
 from __future__ import annotations
@@ -39,42 +47,174 @@ def avatars_unlocked_at(level: int) -> list:
 
 
 def inject_theme(theme_name: str):
+    """
+    Inject the app's global dark "premium app" stylesheet, accented with
+    the given theme's primary color.
+
+    Everything here targets Streamlit's stable data-testid hooks rather
+    than internal class names (which change between Streamlit versions),
+    and every text color is set explicitly -- Streamlit Cloud's own theme
+    default (which can be light or dark depending on the deploy) is never
+    relied on, since that's exactly what caused the earlier illegible-text
+    bug: inherited color with no explicit override.
+    """
     t = THEMES.get(theme_name, THEMES["Sunrise"])
-    # Streamlit Cloud can default to a dark theme, where body text is white.
-    # Our themes only ever set a light pastel background -- without an
-    # explicit text color here, headers/labels/captions inherit that white
-    # and become unreadable against the light background (numbers still
-    # showed up because stMetricValue is colored explicitly below). These
-    # two colors are Streamlit's own default *light*-theme text colors, so
-    # they read cleanly against every pastel background we ship.
-    text_color = "#31333F"
-    muted_text = "#5C5F66"
+    accent = t["primary"]
+    accent_soft = t["accent"]
+
+    bg = "#0B0B0D"          # page shell -- near-black, slightly warm
+    surface = "#181818"     # cards, containers
+    surface_hi = "#232325"  # hovered / raised surface
+    border = "rgba(255,255,255,0.08)"
+    text = "#FFFFFF"
+    muted = "#B3B3B3"
+
     st.markdown(
         f"""
         <style>
-        .stApp {{ background-color: {t['bg']}; color: {text_color}; }}
-        section[data-testid="stSidebar"] {{ background-color: {t['bg']}; color: {text_color}; }}
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+        html, body, .stApp, [class*="css"] {{
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }}
+        h1, h2, h3, h4, .stApp [data-testid="stMarkdownContainer"] h1,
+        .stApp [data-testid="stMarkdownContainer"] h2, .stApp [data-testid="stMarkdownContainer"] h3 {{
+            font-family: 'Poppins', sans-serif !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.01em;
+        }}
+
+        /* ---- Page shell ---------------------------------------------------- */
+        .stApp {{
+            background:
+                radial-gradient(1100px circle at 8% -12%, {accent_soft}2E 0%, transparent 45%),
+                radial-gradient(900px circle at 100% 0%, {accent}1A 0%, transparent 40%),
+                {bg};
+            color: {text};
+        }}
+        section[data-testid="stSidebar"] {{
+            background: #000000;
+            color: {text};
+            border-right: 1px solid {border};
+        }}
         .stApp p, .stApp span, .stApp label, .stApp li,
         section[data-testid="stSidebar"] p, section[data-testid="stSidebar"] span,
-        section[data-testid="stSidebar"] label {{ color: {text_color}; }}
+        section[data-testid="stSidebar"] label {{ color: {text}; }}
         [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {{
-            color: {muted_text} !important;
+            color: {muted} !important;
         }}
-        div[data-testid="stMetricValue"] {{ color: {t['primary']}; }}
-        div[data-testid="stMetricLabel"] {{ color: {muted_text}; }}
+        [data-testid="stHeader"] {{ background: transparent; }}
+
+        /* ---- Sidebar page navigation, styled like a media-app rail --------- */
+        [data-testid="stSidebarNav"] a, [data-testid="stSidebarNavLink"] {{
+            border-radius: 8px;
+            margin: 2px 8px;
+            padding: 8px 12px !important;
+            color: {muted} !important;
+            font-weight: 600;
+            transition: background 0.15s ease, color 0.15s ease;
+        }}
+        [data-testid="stSidebarNav"] a:hover, [data-testid="stSidebarNavLink"]:hover {{
+            background: rgba(255,255,255,0.08);
+            color: {text} !important;
+        }}
+        [data-testid="stSidebarNav"] a[aria-current="page"], [data-testid="stSidebarNavLink"][aria-current="page"] {{
+            background: {accent}26;
+            color: {accent} !important;
+        }}
+
+        /* ---- Buttons --------------------------------------------------------*/
+        .stButton > button, .stFormSubmitButton > button, [data-testid="stChatInputSubmitButton"] {{
+            background: {accent} !important;
+            color: #0B0B0D !important;
+            border: none !important;
+            border-radius: 999px !important;
+            font-weight: 700 !important;
+            padding: 0.5rem 1.4rem !important;
+            transition: transform 0.12s ease, filter 0.12s ease;
+            box-shadow: 0 4px 14px {accent}40;
+        }}
+        .stButton > button:hover, .stFormSubmitButton > button:hover {{
+            transform: translateY(-1px) scale(1.02);
+            filter: brightness(1.08);
+        }}
+        .stButton > button:disabled {{ opacity: 0.4; box-shadow: none; }}
+
+        /* ---- Inputs, selects, chat input -------------------------------------*/
+        div[data-baseweb="input"], div[data-baseweb="select"] > div,
+        div[data-baseweb="textarea"], textarea, [data-testid="stChatInput"] {{
+            background: {surface} !important;
+            color: {text} !important;
+            border-radius: 12px !important;
+            border: 1px solid {border} !important;
+        }}
+        div[data-baseweb="input"]:focus-within, div[data-baseweb="select"] > div:focus-within,
+        div[data-baseweb="textarea"]:focus-within {{
+            border-color: {accent} !important;
+            box-shadow: 0 0 0 1px {accent} !important;
+        }}
+        input, textarea {{ color: {text} !important; }}
+        [data-testid="stChatInput"] textarea::placeholder {{ color: {muted} !important; }}
+
+        /* ---- Metrics ----------------------------------------------------- */
+        div[data-testid="stMetric"] {{
+            background: {surface};
+            border: 1px solid {border};
+            border-radius: 14px;
+            padding: 12px 16px;
+        }}
+        div[data-testid="stMetricValue"] {{ color: {accent} !important; font-family:'Poppins',sans-serif; }}
+        div[data-testid="stMetricLabel"] {{ color: {muted} !important; }}
+
+        /* ---- Progress bars, styled like a playback bar -------------------- */
+        div[data-testid="stProgress"] > div {{ background: rgba(255,255,255,0.12); border-radius: 999px; }}
+        div[data-testid="stProgress"] > div > div {{ background: {accent}; border-radius: 999px; }}
+
+        /* ---- Bordered containers -> elevated cards ------------------------- */
+        div[data-testid="stVerticalBlockBorderWrapper"] {{
+            background: {surface};
+            border: 1px solid {border} !important;
+            border-radius: 16px !important;
+            transition: background 0.15s ease;
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"]:hover {{ background: {surface_hi}; }}
+
+        /* ---- Chat messages, styled as message bubbles ----------------------*/
+        [data-testid="stChatMessage"] {{
+            background: {surface};
+            border: 1px solid {border};
+            border-radius: 18px;
+            padding: 10px 6px;
+            margin-bottom: 10px;
+        }}
+        [data-testid="stChatMessage"] [data-testid="stChatMessageAvatarUser"],
+        [data-testid="stChatMessage"] [data-testid="stChatMessageAvatarAssistant"] {{
+            background: {accent}22;
+            border-radius: 50%;
+        }}
+
+        /* ---- Tabs ------------------------------------------------------- */
+        button[data-baseweb="tab"] {{ color: {muted}; font-weight: 600; }}
+        button[data-baseweb="tab"][aria-selected="true"] {{ color: {accent}; }}
+        div[data-baseweb="tab-highlight"] {{ background-color: {accent} !important; }}
+
+        /* ---- Alerts / toasts, kept legible on dark surfaces ---------------- */
+        div[data-testid="stAlert"] {{ border-radius: 12px; }}
+
+        /* ---- App-specific classes used directly in page markup ------------ */
         .streak-badge {{
             display:inline-block; padding: 6px 14px; border-radius: 999px;
-            background: {t['accent']}; color: {t['primary']}; font-weight: 700;
-            font-size: 1.1rem; margin-bottom: 8px;
+            background: {accent}26; color: {accent}; font-weight: 700;
+            font-size: 1.1rem; margin-bottom: 8px; border: 1px solid {accent}55;
         }}
         .quest-card {{
-            border: 2px solid {t['accent']}; border-radius: 14px; padding: 14px 18px;
-            margin-bottom: 10px; background: white; color: {text_color};
+            border: 1px solid {border}; border-radius: 16px; padding: 16px 20px;
+            margin-bottom: 10px; background: {surface}; color: {text};
         }}
         .badge-pill {{
-            display:inline-block; background:{t['accent']}; border-radius: 10px;
-            padding: 8px 10px; margin: 4px; text-align:center; font-size: 0.85rem;
-            color: {t['primary']};
+            display:inline-block; background:{surface}; border: 1px solid {accent}55;
+            border-radius: 12px; padding: 10px 12px; margin: 4px; text-align:center;
+            font-size: 0.85rem; color: {text};
         }}
         </style>
         """,
