@@ -15,16 +15,16 @@ ui.sidebar_switcher()
 name = st.session_state.active_profile
 
 st.title("💬 Chat Tutor")
-st.caption("Réponds comme tu peux -- l'important, c'est d'essayer !")
+st.caption("Answer however you can -- what matters is trying!")
 
 with st.sidebar:
     st.markdown("---")
     if ai_client.is_configured():
-        st.success(f"🤖 IA activée ({ai_client.get_model()})")
+        st.success(f"🤖 AI enabled ({ai_client.get_model()})")
     else:
-        st.warning("📴 Mode hors-ligne (aucune clé API)")
-        st.caption("Ajoute une clé dans **Réglages** pour une conversation vraiment adaptative.")
-    st.markdown("### 💡 Astuce grammaire du jour")
+        st.warning("📴 Offline mode (no API key)")
+        st.caption("Add a key in **Settings** for truly adaptive conversation.")
+    st.markdown("### 💡 Grammar tip of the day")
     tips = cb.GRAMMAR_TIPS.get(profile["level"], cb.GRAMMAR_TIPS["A1"])
     tip_title, tip_body = tips[date.today().toordinal() % len(tips)]
     st.markdown(f"**{tip_title}**")
@@ -43,13 +43,13 @@ if hist_key not in st.session_state:
 pending = st.session_state.pop(celebration_key, None)
 if pending:
     if pending.get("ai_error"):
-        st.info("ℹ️ L'IA n'a pas répondu cette fois (voir détail ci-dessous) -- réponse hors-ligne utilisée à la place.")
-        with st.expander("Détail technique"):
+        st.info("ℹ️ The AI didn't respond this time (see details below) -- offline reply used instead.")
+        with st.expander("Technical detail"):
             st.code(pending["ai_error"])
     ui.show_level_up(pending["xp_result"])
     ui.show_new_badges(pending["newly"])
     for q in pending["quests"]:
-        st.success(f"🎯 Quête terminée : **{q['title']}** ! +{q['xp']} XP, +{q['coins']} pièces.")
+        st.success(f"🎯 Quest completed: **{q['title']}**! +{q['xp']} XP, +{q['coins']} coins.")
 
 for msg in st.session_state[hist_key]:
     with st.chat_message(msg["role"], avatar=(profile["avatar"] if msg["role"] == "user" else "🇫🇷")):
@@ -60,12 +60,12 @@ for msg in st.session_state[hist_key]:
             st.caption("🆕 " + " • ".join(f"**{v['fr']}** ({v['en']})" for v in msg["new_vocab"]))
         if msg.get("corrections"):
             with st.container(border=True):
-                st.markdown("**✏️ Petite remarque amicale :**")
+                st.markdown("**✏️ Friendly note:**")
                 for c in msg["corrections"]:
-                    st.markdown(f"- Tu as écrit *« {c['matched']} »* → on dirait plutôt **« {c['suggestion']} »**")
+                    st.markdown(f"- You wrote *« {c['matched']} »* → it's more natural as **« {c['suggestion']} »**")
                     st.caption(c["explanation"])
 
-user_text = st.chat_input("Écris ta réponse en français...")
+user_text = st.chat_input("Write your reply in French...")
 
 if user_text:
     st.session_state[hist_key].append({"role": "user", "content": user_text})
@@ -79,7 +79,7 @@ if user_text:
     )
 
     profile["messages_sent"] += 1
-    xp_result = game.award_xp(profile, 3, "Message envoyé dans le Chat")
+    xp_result = game.award_xp(profile, 3, "Message sent in Chat")
     quest_done = game.bump_quest_progress(profile, "chat_count", amount=1)
 
     if result["corrections"]:
