@@ -15,7 +15,12 @@ ui.sidebar_switcher()
 name = st.session_state.active_profile
 
 st.title("🎭 Role-play")
-st.caption("Live out a little scene in French, as if you were really there. Type or use the mic 🎤.")
+st.caption("Live out a little scene in French, as if you were really there.")
+conv_on = voice.conversation_toggle(f"conv_mode_roleplay_{name}")
+if conv_on:
+    st.caption("🎙️ Conversation mode is on -- just talk, pause when you're done, and the scene will answer out loud.")
+else:
+    st.caption("Type, or turn on conversation mode above to talk hands-free.")
 
 ai_mode = ai_client.is_configured()
 with st.sidebar:
@@ -68,9 +73,19 @@ if ai_mode:
     if st.session_state[ended_key]:
         st.success("✅ Scene complete! Pick another scene or restart this one.")
     else:
-        mic_col, _ = st.columns([1, 8])
-        with mic_col:
-            mic_text = voice.mic_input(f"roleplay_ai_mic_{name}_{scenario_id}") if voice.mic_available() else None
+        mic_text = None
+        if conv_on:
+            last_msg = st.session_state[hist_key][-1]
+            speak_text = last_msg["content"] if last_msg["role"] == "assistant" else None
+            voice.conversation_loop(
+                turn_id=str(len(st.session_state[hist_key])),
+                conv_key=f"roleplay_ai_{name}_{scenario_id}",
+                speak_text=speak_text,
+            )
+        else:
+            mic_col, _ = st.columns([1, 8])
+            with mic_col:
+                mic_text = voice.mic_input(f"roleplay_ai_mic_{name}_{scenario_id}") if voice.mic_available() else None
         user_reply = mic_text or st.chat_input("Reply in the scene...")
         if user_reply:
             st.session_state[hist_key].append({"role": "user", "content": user_reply})
@@ -132,9 +147,17 @@ else:
                 st.markdown(f"- *{ex}*")
 
     if node["keywords"]:
-        mic_col, _ = st.columns([1, 8])
-        with mic_col:
-            mic_text = voice.mic_input(f"roleplay_node_mic_{name}_{scenario_id}_{current_node_id}") if voice.mic_available() else None
+        mic_text = None
+        if conv_on:
+            voice.conversation_loop(
+                turn_id=str(current_node_id),
+                conv_key=f"roleplay_offline_{name}_{scenario_id}",
+                speak_text=node["bot_fr"],
+            )
+        else:
+            mic_col, _ = st.columns([1, 8])
+            with mic_col:
+                mic_text = voice.mic_input(f"roleplay_node_mic_{name}_{scenario_id}_{current_node_id}") if voice.mic_available() else None
         user_reply = mic_text or st.chat_input("Reply in the scene...")
         if user_reply:
             matched = any(kw.lower() in user_reply.lower() for kw in node["keywords"])
@@ -169,4 +192,4 @@ else:
             ui.save()
             ui.show_level_up(result)
             ui.show_new_badges(newly)
-           
+            st.rerun()

@@ -16,7 +16,12 @@ ui.sidebar_switcher()
 name = st.session_state.active_profile
 
 st.title("📖 Story Mode")
-st.caption("Your personal story -- pick it up where you left it, at your own pace. Type or use the mic 🎤.")
+st.caption("Your personal story -- pick it up where you left it, at your own pace.")
+conv_on = voice.conversation_toggle(f"conv_mode_story_{name}")
+if conv_on:
+    st.caption("🎙️ Conversation mode is on -- just talk, pause when you're done, and the narrator will answer out loud.")
+else:
+    st.caption("Type, or turn on conversation mode above to talk hands-free.")
 
 ai_mode = ai_client.is_configured()
 with st.sidebar:
@@ -91,9 +96,23 @@ if st.session_state[ended_key]:
 # AI-DRIVEN MODE -- open-ended continuation
 # ===========================================================================
 if ai_mode:
-    mic_col, _ = st.columns([1, 8])
-    with mic_col:
-        mic_text = voice.mic_input(f"story_ai_mic_{name}_{story_id}") if voice.mic_available() else None
+    mic_text = None
+    if conv_on:
+        transcript = st.session_state[transcript_key]
+        if not transcript:
+            speak_text = first_chapter["fr"] if first_chapter else None
+        else:
+            last_entry = transcript[-1]
+            speak_text = last_entry["text"] if last_entry["role"] == "narrator" else None
+        voice.conversation_loop(
+            turn_id=str(len(transcript)),
+            conv_key=f"story_ai_{name}_{story_id}",
+            speak_text=speak_text,
+        )
+    else:
+        mic_col, _ = st.columns([1, 8])
+        with mic_col:
+            mic_text = voice.mic_input(f"story_ai_mic_{name}_{story_id}") if voice.mic_available() else None
     contribution = mic_text or st.chat_input("Write what happens next, in French...")
     if contribution:
         if not st.session_state[transcript_key]:
@@ -154,9 +173,17 @@ else:
     if chapter["prompt"]:
         if chapter_idx > 0:
             st.caption(f"✍️ {chapter['prompt']}")
-        mic_col, _ = st.columns([1, 8])
-        with mic_col:
-            mic_text = voice.mic_input(f"story_offline_mic_{name}_{story_id}_{chapter_idx}") if voice.mic_available() else None
+        mic_text = None
+        if conv_on:
+            voice.conversation_loop(
+                turn_id=str(chapter_idx),
+                conv_key=f"story_offline_{name}_{story_id}",
+                speak_text=chapter["fr"],
+            )
+        else:
+            mic_col, _ = st.columns([1, 8])
+            with mic_col:
+                mic_text = voice.mic_input(f"story_offline_mic_{name}_{story_id}_{chapter_idx}") if voice.mic_available() else None
         contribution = mic_text or st.chat_input("Write what happens next, in French...")
         if contribution:
             st.session_state[transcript_key].append({"role": "narrator", "text": f"**Chapter {chapter_idx + 1}**\n\n{chapter['fr']}"})
@@ -179,4 +206,4 @@ else:
             ui.save()
             ui.show_level_up(result)
             ui.show_new_badges(newly)
-           
+            st.rerun()

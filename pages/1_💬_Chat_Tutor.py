@@ -15,7 +15,12 @@ ui.sidebar_switcher()
 name = st.session_state.active_profile
 
 st.title("💬 Chat Tutor")
-st.caption("Answer however you can -- what matters is trying! Type or use the mic 🎤.")
+st.caption("Answer however you can -- what matters is trying!")
+conv_on = voice.conversation_toggle(f"conv_mode_chat_{name}")
+if conv_on:
+    st.caption("🎙️ Conversation mode is on -- just talk, pause when you're done, and the tutor will answer out loud.")
+else:
+    st.caption("Type, or turn on conversation mode above to talk hands-free.")
 
 with st.sidebar:
     st.markdown("---")
@@ -67,11 +72,20 @@ for i, msg in enumerate(st.session_state[hist_key]):
                     st.markdown(f"- You wrote *« {c['matched']} »* → it's more natural as **« {c['suggestion']} »**")
                     st.caption(c["explanation"])
 
-mic_col, _ = st.columns([1, 8])
-with mic_col:
-    mic_text = voice.mic_input(f"chat_tutor_mic_{name}") if voice.mic_available() else None
+if conv_on:
+    last_msg = st.session_state[hist_key][-1]
+    speak_text = last_msg["content"] if last_msg["role"] == "assistant" else None
+    voice.conversation_loop(
+        turn_id=str(len(st.session_state[hist_key])),
+        conv_key=f"chat_tutor_{name}",
+        speak_text=speak_text,
+    )
+else:
+    mic_col, _ = st.columns([1, 8])
+    with mic_col:
+        mic_text = voice.mic_input(f"chat_tutor_mic_{name}") if voice.mic_available() else None
 
-user_text = mic_text or st.chat_input("Write your reply in French...")
+user_text = (mic_text if not conv_on else None) or st.chat_input("Write your reply in French...")
 
 if user_text:
     st.session_state[hist_key].append({"role": "user", "content": user_text})
