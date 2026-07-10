@@ -21,7 +21,9 @@ st.caption("Your personal story -- pick it up where you left it, at your own pac
 ai_mode = ai_client.is_configured()
 with st.sidebar:
     st.markdown("---")
-    st.success(f"🤖 Adaptive AI story ({ai_client.get_model()})") if ai_mode else \
+    if ai_mode:
+        st.success(f"🤖 Adaptive AI story ({ai_client.get_model()})")
+    else:
         st.warning("📴 Fixed chapters mode (no API key)")
 
 story_ids = list(cb.STORIES.keys())
@@ -177,4 +179,4 @@ else:
             ui.save()
             ui.show_level_up(result)
             ui.show_new_badges(newly)
-            st.rerun()
+           

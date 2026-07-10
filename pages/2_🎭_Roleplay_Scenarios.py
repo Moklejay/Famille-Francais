@@ -20,7 +20,9 @@ st.caption("Live out a little scene in French, as if you were really there. Type
 ai_mode = ai_client.is_configured()
 with st.sidebar:
     st.markdown("---")
-    st.success(f"🤖 AI improv ({ai_client.get_model()})") if ai_mode else \
+    if ai_mode:
+        st.success(f"🤖 AI improv ({ai_client.get_model()})")
+    else:
         st.warning("📴 Scripted scenario mode (no API key)")
 
 scenario_ids = list(cb.SCENARIOS.keys())
@@ -167,4 +169,4 @@ else:
             ui.save()
             ui.show_level_up(result)
             ui.show_new_badges(newly)
-            st.rerun()
+           
