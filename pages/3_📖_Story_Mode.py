@@ -7,7 +7,7 @@ to a fixed sequence of pre-written chapters.
 """
 
 import streamlit as st
-from core import ui, gamification as game, content_bank as cb, tutor_engine, ai_client
+from core import ui, gamification as game, content_bank as cb, tutor_engine, ai_client, voice
 
 st.set_page_config(page_title="Story Mode", page_icon="📖", layout="wide")
 ui.init_app_state()
@@ -16,7 +16,7 @@ ui.sidebar_switcher()
 name = st.session_state.active_profile
 
 st.title("📖 Story Mode")
-st.caption("Your personal story -- pick it up where you left it, at your own pace.")
+st.caption("Your personal story -- pick it up where you left it, at your own pace. Type or use the mic 🎤.")
 
 ai_mode = ai_client.is_configured()
 with st.sidebar:
@@ -56,9 +56,10 @@ if st.button("🔄 Restart this story"):
 
 st.divider()
 
-for entry in st.session_state[transcript_key]:
+for i, entry in enumerate(st.session_state[transcript_key]):
     if entry["role"] == "narrator":
         st.markdown(entry["text"])
+        voice.speak_button(entry["text"], key=f"story_{name}_{story_id}_{i}")
         if entry.get("corrections"):
             with st.container(border=True):
                 st.markdown("**✏️ Friendly note on your last contribution:**")
@@ -75,6 +76,7 @@ first_chapter = cb.get_story_chapter(story_id, 0)
 if not st.session_state[transcript_key] and first_chapter:
     st.markdown(f"**Chapter 1**")
     st.markdown(first_chapter["fr"])
+    voice.speak_button(first_chapter["fr"], key=f"story_first_{name}_{story_id}")
     if first_chapter["prompt"]:
         st.caption(f"✍️ {first_chapter['prompt']}")
 
@@ -87,7 +89,10 @@ if st.session_state[ended_key]:
 # AI-DRIVEN MODE -- open-ended continuation
 # ===========================================================================
 if ai_mode:
-    contribution = st.chat_input("Write what happens next, in French...")
+    mic_col, _ = st.columns([1, 8])
+    with mic_col:
+        mic_text = voice.mic_input(f"story_ai_mic_{name}_{story_id}") if voice.mic_available() else None
+    contribution = mic_text or st.chat_input("Write what happens next, in French...")
     if contribution:
         if not st.session_state[transcript_key]:
             st.session_state[transcript_key].append({"role": "narrator", "text": f"**Chapter 1**\n\n{first_chapter['fr']}"})
@@ -142,11 +147,15 @@ else:
     if chapter_idx > 0:
         st.markdown(f"**Chapter {chapter_idx + 1}**")
         st.markdown(chapter["fr"])
+        voice.speak_button(chapter["fr"], key=f"story_chapter_{name}_{story_id}_{chapter_idx}")
 
     if chapter["prompt"]:
         if chapter_idx > 0:
             st.caption(f"✍️ {chapter['prompt']}")
-        contribution = st.chat_input("Write what happens next, in French...")
+        mic_col, _ = st.columns([1, 8])
+        with mic_col:
+            mic_text = voice.mic_input(f"story_offline_mic_{name}_{story_id}_{chapter_idx}") if voice.mic_available() else None
+        contribution = mic_text or st.chat_input("Write what happens next, in French...")
         if contribution:
             st.session_state[transcript_key].append({"role": "narrator", "text": f"**Chapter {chapter_idx + 1}**\n\n{chapter['fr']}"})
             st.session_state[transcript_key].append({"role": "user", "text": contribution})
