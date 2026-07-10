@@ -1,24 +1,24 @@
 """
-Page: Quests -- daily quest, weekly quest, this week's sibling joint
-quest, and the full badge gallery (locked + unlocked) for motivation.
+Page: Quests -- daily quest, weekly quest, and the full badge gallery
+(locked + unlocked) for motivation.
 """
 
 from datetime import date
 import streamlit as st
 from core import ui, gamification as game, content_bank as cb
 
-st.set_page_config(page_title="Quêtes", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="Quests", page_icon="🎯", layout="wide")
 ui.init_app_state()
 profile = ui.require_profile()
 ui.sidebar_switcher()
 db = st.session_state.db
 
-st.title("🎯 Quêtes & Défis")
+st.title("🎯 Quests & Challenges")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("☀️ Quête du jour")
+    st.subheader("☀️ Today's quest")
     daily = profile["quests"]["daily"]
     quest = next((q for q in cb.QUESTS_DAILY if q["id"] == daily["quest_id"]), None)
     if quest is None:
@@ -38,11 +38,11 @@ with col1:
         progress = daily.get("progress", 0)
         if quest["type"] != "scenario":
             st.progress(min(1.0, progress / quest["target"]), text=f"{min(progress, quest['target'])}/{quest['target']}")
-        st.caption(f"Récompense : +{quest['xp']} XP, +{quest['coins']} 🪙")
-        st.markdown("✅ **Terminée !**" if daily["done"] else "⏳ En cours...")
+        st.caption(f"Reward: +{quest['xp']} XP, +{quest['coins']} 🪙")
+        st.markdown("✅ **Done!**" if daily["done"] else "⏳ In progress...")
 
 with col2:
-    st.subheader("📅 Quête de la semaine")
+    st.subheader("📅 This week's quest")
     weekly = profile["quests"]["weekly"]
     wquest = next((q for q in cb.QUESTS_WEEKLY if q["id"] == weekly["quest_id"]), None)
     if wquest is None:
@@ -56,26 +56,12 @@ with col2:
         st.write(wquest["desc"])
         progress = weekly.get("progress", 0)
         st.progress(min(1.0, progress / wquest["target"]), text=f"{min(progress, wquest['target'])}/{wquest['target']}")
-        st.caption(f"Récompense : +{wquest['xp']} XP, +{wquest['coins']} 🪙")
-        st.markdown("✅ **Terminée !**" if weekly["done"] else "⏳ En cours...")
+        st.caption(f"Reward: +{wquest['xp']} XP, +{wquest['coins']} 🪙")
+        st.markdown("✅ **Done!**" if weekly["done"] else "⏳ In progress...")
 
 st.divider()
-st.subheader("🤝 Défi fraternel de la semaine")
-joint_quest = game.get_this_weeks_joint_quest()
-week = f"{date.today().isocalendar()[0]}-W{date.today().isocalendar()[1]}"
-done_already = any(j["quest_id"] == joint_quest["id"] and j["week"] == week for j in db["joint_quests_completed"])
-with st.container(border=True):
-    st.markdown(f"**{joint_quest['title']}**")
-    st.write(joint_quest["desc"])
-    st.caption(f"Récompense pour chacun : +{joint_quest['xp']} XP, +{joint_quest['coins']} 🪙")
-    if len(db["profiles"]) < 2:
-        st.info("Ajoute un deuxième profil (page d'accueil) pour débloquer les défis fraternels !")
-    else:
-        st.markdown("✅ **Réussi cette semaine !**" if done_already else "⏳ Chacun doit faire sa part cette semaine...")
-
-st.divider()
-st.subheader("🏅 Galerie des badges")
-st.caption("Badges débloqués en couleur, badges à venir en gris.")
+st.subheader("🏅 Badge gallery")
+st.caption("Unlocked badges in color, upcoming ones in gray.")
 
 cols = st.columns(4)
 for i, badge in enumerate(cb.BADGES):
