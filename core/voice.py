@@ -1,6 +1,6 @@
 """
-voice.py
---------
+voice.py (v2)
+--------------
 Voice for Chat Tutor, Roleplay Scenarios, and Story Mode.
 
 Two modes are offered:
