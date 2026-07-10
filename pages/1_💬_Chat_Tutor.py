@@ -6,7 +6,7 @@ and transparently falls back to the offline rule-based engine otherwise.
 
 from datetime import date
 import streamlit as st
-from core import ui, gamification as game, tutor_engine, content_bank as cb, ai_client
+from core import ui, gamification as game, tutor_engine, content_bank as cb, ai_client, voice
 
 st.set_page_config(page_title="Chat Tutor", page_icon="💬", layout="wide")
 ui.init_app_state()
@@ -15,7 +15,7 @@ ui.sidebar_switcher()
 name = st.session_state.active_profile
 
 st.title("💬 Chat Tutor")
-st.caption("Answer however you can -- what matters is trying!")
+st.caption("Answer however you can -- what matters is trying! Type or use the mic 🎤.")
 
 with st.sidebar:
     st.markdown("---")
@@ -51,9 +51,11 @@ if pending:
     for q in pending["quests"]:
         st.success(f"🎯 Quest completed: **{q['title']}**! +{q['xp']} XP, +{q['coins']} coins.")
 
-for msg in st.session_state[hist_key]:
+for i, msg in enumerate(st.session_state[hist_key]):
     with st.chat_message(msg["role"], avatar=(profile["avatar"] if msg["role"] == "user" else "🇫🇷")):
         st.markdown(msg["content"])
+        if msg["role"] == "assistant":
+            voice.speak_button(msg["content"], key=f"chat_tutor_{name}_{i}")
         if msg.get("hint_en"):
             st.caption(f"💭 {msg['hint_en']}")
         if msg.get("new_vocab"):
@@ -65,7 +67,11 @@ for msg in st.session_state[hist_key]:
                     st.markdown(f"- You wrote *« {c['matched']} »* → it's more natural as **« {c['suggestion']} »**")
                     st.caption(c["explanation"])
 
-user_text = st.chat_input("Write your reply in French...")
+mic_col, _ = st.columns([1, 8])
+with mic_col:
+    mic_text = voice.mic_input(f"chat_tutor_mic_{name}") if voice.mic_available() else None
+
+user_text = mic_text or st.chat_input("Write your reply in French...")
 
 if user_text:
     st.session_state[hist_key].append({"role": "user", "content": user_text})
