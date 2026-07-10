@@ -40,11 +40,28 @@ def avatars_unlocked_at(level: int) -> list:
 
 def inject_theme(theme_name: str):
     t = THEMES.get(theme_name, THEMES["Sunrise"])
+    # Streamlit Cloud can default to a dark theme, where body text is white.
+    # Our themes only ever set a light pastel background -- without an
+    # explicit text color here, headers/labels/captions inherit that white
+    # and become unreadable against the light background (numbers still
+    # showed up because stMetricValue is colored explicitly below). These
+    # two colors are Streamlit's own default *light*-theme text colors, so
+    # they read cleanly against every pastel background we ship.
+    text_color = "#31333F"
+    muted_text = "#5C5F66"
     st.markdown(
         f"""
         <style>
-        .stApp {{ background-color: {t['bg']}; }}
+        .stApp {{ background-color: {t['bg']}; color: {text_color}; }}
+        section[data-testid="stSidebar"] {{ background-color: {t['bg']}; color: {text_color}; }}
+        .stApp p, .stApp span, .stApp label, .stApp li,
+        section[data-testid="stSidebar"] p, section[data-testid="stSidebar"] span,
+        section[data-testid="stSidebar"] label {{ color: {text_color}; }}
+        [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {{
+            color: {muted_text} !important;
+        }}
         div[data-testid="stMetricValue"] {{ color: {t['primary']}; }}
+        div[data-testid="stMetricLabel"] {{ color: {muted_text}; }}
         .streak-badge {{
             display:inline-block; padding: 6px 14px; border-radius: 999px;
             background: {t['accent']}; color: {t['primary']}; font-weight: 700;
@@ -52,11 +69,12 @@ def inject_theme(theme_name: str):
         }}
         .quest-card {{
             border: 2px solid {t['accent']}; border-radius: 14px; padding: 14px 18px;
-            margin-bottom: 10px; background: white;
+            margin-bottom: 10px; background: white; color: {text_color};
         }}
         .badge-pill {{
             display:inline-block; background:{t['accent']}; border-radius: 10px;
             padding: 8px 10px; margin: 4px; text-align:center; font-size: 0.85rem;
+            color: {t['primary']};
         }}
         </style>
         """,
