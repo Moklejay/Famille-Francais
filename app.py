@@ -1,17 +1,24 @@
 """
-Famille Français -- Home / Family Dashboard
-=============================================
-Run with:  streamlit run app.py
+Famille Français -- Home / Your Journey Dashboard
+==================================================
+Run with: streamlit run app.py
 
 This is the entry point: create/select profiles here, then use the pages
 in the left sidebar (Chat Tutor, Role-play, Story Mode, Vocab Review,
-Quests, Family Leaderboard, Settings & Export).
+Quests, Settings & Export).
 
 NOTE ON LANGUAGE: the interface (buttons, labels, messages) is in English
 on purpose -- so anyone can use the app comfortably, even if they aren't
 the one learning French. The actual French PRACTICE content (the tutor's
 replies, role-play dialogue, story text, vocabulary) stays in French,
 since that's the whole point of the app.
+
+NOTE ON MULTIPLE PROFILES: several people can still each have their own
+profile on the same install (handy if more than one person wants to
+practice) -- but progress is intentionally never compared between
+profiles. There is no leaderboard and no aggregate "family" stats;
+each profile only ever sees its own journey. This is a deliberate
+choice: the app is about personal progression, not competition.
 """
 
 import streamlit as st
@@ -65,13 +72,13 @@ with st.expander("➕ Add another profile"):
         new_level = c2.selectbox("Level", ["A1", "A2", "B1", "B2", "C1"])
         new_avatar = c3.selectbox("Avatar", starter_avatars)
         submitted = c4.form_submit_button("Add")
-    if submitted:
-        if new_name.strip() and new_name.strip() not in db["profiles"]:
-            storage.create_profile(db, new_name.strip(), new_level, new_avatar)
-            ui.save()
-            st.rerun()
-        else:
-            st.error("Choose a unique name.")
+        if submitted:
+            if new_name.strip() and new_name.strip() not in db["profiles"]:
+                storage.create_profile(db, new_name.strip(), new_level, new_avatar)
+                ui.save()
+                st.rerun()
+            else:
+                st.error("Choose a unique name.")
 
 ui.sidebar_switcher()
 
@@ -85,52 +92,38 @@ game.ensure_quest_slots(profile)
 newly = game.new_badges(profile)
 if bonus or newly:
     ui.save()
-ui.show_new_badges(newly)
+    ui.show_new_badges(newly)
 
 st.divider()
 
 # ---------------------------------------------------------------------------
-# Family Journey Dashboard
+# Your Journey -- this profile's own progress only. No family aggregate,
+# no leaderboard, no cross-profile comparison on purpose: the app is about
+# personal progression, so the only stats shown here belong to whoever is
+# currently active in the sidebar.
 # ---------------------------------------------------------------------------
-st.header("👨‍👩‍👧‍👦 The Family Journey")
-
-family_xp = sum(p["xp"] for p in db["profiles"].values())
-family_streak = max((p["streak"]["current"] for p in db["profiles"].values()), default=0)
-family_words = sum(p["vocab_known_count"] for p in db["profiles"].values())
-family_scenarios = sum(len(p["scenarios_completed"]) for p in db["profiles"].values())
+lvl = game.compute_level(profile["xp"])
+st.header(f"{profile['avatar']} Your Journey")
+st.caption(f"**{st.session_state.active_profile}** -- Level {lvl} ({profile['level']} CEFR)")
+st.progress(game.xp_to_next_level(profile["xp"])[2])
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("⭐ Total family XP", family_xp)
-c2.metric("🔥 Best active streak", f"{family_streak} days")
-c3.metric("🧠 Words learned (total)", family_words)
-c4.metric("🎭 Role-plays completed", family_scenarios)
+c1.metric("⭐ XP", profile["xp"])
+c2.metric("🔥 Streak", f"{profile['streak']['current']} days")
+c3.metric("🧠 Words learned", profile["vocab_known_count"])
+c4.metric("🎭 Role-plays completed", len(profile["scenarios_completed"]))
 
-st.subheader("📊 Everyone's progress")
-for name, p in db["profiles"].items():
-    lvl = game.compute_level(p["xp"])
-    with st.container(border=True):
-        cols = st.columns([1, 3, 2, 2, 2])
-        cols[0].markdown(f"## {p['avatar']}")
-        cols[1].markdown(f"**{name}** -- Level {lvl} ({p['level']} CEFR)")
-        cols[1].progress(game.xp_to_next_level(p["xp"])[2])
-        cols[2].metric("XP", p["xp"])
-        cols[3].metric("🔥 Streak", p["streak"]["current"])
-        cols[4].metric("🏅 Badges", len(p["badges"]))
-
-st.subheader("🏅 Family badge showcase")
-tabs = st.tabs(list(db["profiles"].keys()))
-for tab, (name, p) in zip(tabs, db["profiles"].items()):
-    with tab:
-        if not p["badges"]:
-            st.caption("No badges yet -- jump into the Chat or a Role-play!")
-        else:
-            badge_html = ""
-            for bid in p["badges"]:
-                b = next((x for x in cb.BADGES if x["id"] == bid), None)
-                if b:
-                    badge_html += f'<span class="badge-pill">{b["emoji"]}<br>{b["name"]}</span>'
-            st.markdown(badge_html, unsafe_allow_html=True)
+st.subheader("🏅 Your badges")
+if not profile["badges"]:
+    st.caption("No badges yet -- jump into the Chat or a Role-play!")
+else:
+    badge_html = ""
+    for bid in profile["badges"]:
+        b = next((x for x in cb.BADGES if x["id"] == bid), None)
+        if b:
+            badge_html += f'<span class="badge-pill">{b["emoji"]}<br>{b["name"]}</span>'
+    st.markdown(badge_html, unsafe_allow_html=True)
 
 st.divider()
 st.info("👉 Use the menu on the left to get started: **Chat Tutor**, **Role-play**, **Story Mode**, "
-        "**Vocab Review**, **Quests**, **Family Leaderboard**, or **Settings & Export**.")
+        "**Vocab Review**, **Quests**, or **Settings & Export**.")
