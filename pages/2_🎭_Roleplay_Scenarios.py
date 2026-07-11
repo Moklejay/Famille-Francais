@@ -189,4 +189,9 @@ else:
                 profile["scenarios_completed"].append(scenario_id)
             game.bump_quest_progress(profile, "scenario", target_value=scenario_id)
             game.bump_quest_progress(profile, "scenario_count", target_value=scenario_id)
-    
+            newly = game.new_badges(profile)
+            st.session_state[node_key] = None
+            ui.save()
+            ui.show_level_up(result)
+            ui.show_new_badges(newly)
+            st.rerun()

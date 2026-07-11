@@ -203,4 +203,9 @@ else:
             result = game.award_xp(profile, 20, f"Story completed: {story['title']}")
             profile["story_progress"][story_id] = chapter_idx + 1
             if story_id not in profile["stories_completed"]:
-                prof
+                profile["stories_completed"].append(story_id)
+            newly = game.new_badges(profile)
+            ui.save()
+            ui.show_level_up(result)
+            ui.show_new_badges(newly)
+            st.rerun()
