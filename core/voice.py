@@ -66,8 +66,35 @@ def conversation_toggle(key: str, label: str = "🎙️ Conversation mode (hands
     A single on/off switch. When on, a page should hide its manual
     mic/listen controls and call conversation_loop() every rerun
     instead. Persists via Streamlit's own widget state.
+
+    Defaults to ON: hands-free is the experience people actually want,
+    so we shouldn't make them go find a toggle first.
     """
-    return st.toggle(label, key=key)
+    return st.toggle(label, key=key, value=True)
+
+
+def conversation_gate(key: str, label: str = "🎙️ Tap once to start talking") -> bool:
+    """
+    One-time 'enable microphone' tap. Browsers will not let a page turn
+    on the microphone with zero clicks -- the very first request for mic
+    access has to come from a real user gesture (a click), or the browser
+    silently refuses it, which is exactly why the fully-automatic version
+    looked like it "didn't respond" at all. This renders a single button;
+    once tapped, the flag is remembered for the rest of the session, so
+    conversation_loop() runs completely hands-free after that -- one tap
+    per visit, not one tap per turn.
+
+    Returns True once the gate has been passed (this call or an earlier
+    one this session), False while still waiting on that first tap.
+    """
+    flag_key = f"_conv_started_{key}"
+    if st.session_state.get(flag_key):
+        return True
+    if st.button(label, key=f"_conv_btn_{key}"):
+        st.session_state[flag_key] = True
+        return True
+    st.caption("Your browser requires one tap to allow microphone access -- after this, it's fully hands-free.")
+    return False
 
 
 def conversation_loop(
