@@ -75,13 +75,14 @@ if ai_mode:
     else:
         mic_text = None
         if conv_on:
-            last_msg = st.session_state[hist_key][-1]
-            speak_text = last_msg["content"] if last_msg["role"] == "assistant" else None
-            voice.conversation_loop(
-                turn_id=str(len(st.session_state[hist_key])),
-                conv_key=f"roleplay_ai_{name}_{scenario_id}",
-                speak_text=speak_text,
-            )
+            if voice.conversation_gate(f"roleplay_ai_{name}_{scenario_id}"):
+                last_msg = st.session_state[hist_key][-1]
+                speak_text = last_msg["content"] if last_msg["role"] == "assistant" else None
+                voice.conversation_loop(
+                    turn_id=str(len(st.session_state[hist_key])),
+                    conv_key=f"roleplay_ai_{name}_{scenario_id}",
+                    speak_text=speak_text,
+                )
         else:
             mic_col, _ = st.columns([1, 8])
             with mic_col:
@@ -149,11 +150,12 @@ else:
     if node["keywords"]:
         mic_text = None
         if conv_on:
-            voice.conversation_loop(
-                turn_id=str(current_node_id),
-                conv_key=f"roleplay_offline_{name}_{scenario_id}",
-                speak_text=node["bot_fr"],
-            )
+            if voice.conversation_gate(f"roleplay_offline_{name}_{scenario_id}"):
+                voice.conversation_loop(
+                    turn_id=str(current_node_id),
+                    conv_key=f"roleplay_offline_{name}_{scenario_id}",
+                    speak_text=node["bot_fr"],
+                )
         else:
             mic_col, _ = st.columns([1, 8])
             with mic_col:
@@ -187,9 +189,4 @@ else:
                 profile["scenarios_completed"].append(scenario_id)
             game.bump_quest_progress(profile, "scenario", target_value=scenario_id)
             game.bump_quest_progress(profile, "scenario_count", target_value=scenario_id)
-            newly = game.new_badges(profile)
-            st.session_state[node_key] = None
-            ui.save()
-            ui.show_level_up(result)
-            ui.show_new_badges(newly)
-            st.rerun()
+    

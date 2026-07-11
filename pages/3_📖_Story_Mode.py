@@ -98,17 +98,18 @@ if st.session_state[ended_key]:
 if ai_mode:
     mic_text = None
     if conv_on:
-        transcript = st.session_state[transcript_key]
-        if not transcript:
-            speak_text = first_chapter["fr"] if first_chapter else None
-        else:
-            last_entry = transcript[-1]
-            speak_text = last_entry["text"] if last_entry["role"] == "narrator" else None
-        voice.conversation_loop(
-            turn_id=str(len(transcript)),
-            conv_key=f"story_ai_{name}_{story_id}",
-            speak_text=speak_text,
-        )
+        if voice.conversation_gate(f"story_ai_{name}_{story_id}"):
+            transcript = st.session_state[transcript_key]
+            if not transcript:
+                speak_text = first_chapter["fr"] if first_chapter else None
+            else:
+                last_entry = transcript[-1]
+                speak_text = last_entry["text"] if last_entry["role"] == "narrator" else None
+            voice.conversation_loop(
+                turn_id=str(len(transcript)),
+                conv_key=f"story_ai_{name}_{story_id}",
+                speak_text=speak_text,
+            )
     else:
         mic_col, _ = st.columns([1, 8])
         with mic_col:
@@ -175,11 +176,12 @@ else:
             st.caption(f"✍️ {chapter['prompt']}")
         mic_text = None
         if conv_on:
-            voice.conversation_loop(
-                turn_id=str(chapter_idx),
-                conv_key=f"story_offline_{name}_{story_id}",
-                speak_text=chapter["fr"],
-            )
+            if voice.conversation_gate(f"story_offline_{name}_{story_id}"):
+                voice.conversation_loop(
+                    turn_id=str(chapter_idx),
+                    conv_key=f"story_offline_{name}_{story_id}",
+                    speak_text=chapter["fr"],
+                )
         else:
             mic_col, _ = st.columns([1, 8])
             with mic_col:
@@ -201,9 +203,4 @@ else:
             result = game.award_xp(profile, 20, f"Story completed: {story['title']}")
             profile["story_progress"][story_id] = chapter_idx + 1
             if story_id not in profile["stories_completed"]:
-                profile["stories_completed"].append(story_id)
-            newly = game.new_badges(profile)
-            ui.save()
-            ui.show_level_up(result)
-            ui.show_new_badges(newly)
-            st.rerun()
+                prof

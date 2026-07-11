@@ -73,13 +73,14 @@ for i, msg in enumerate(st.session_state[hist_key]):
                     st.caption(c["explanation"])
 
 if conv_on:
-    last_msg = st.session_state[hist_key][-1]
-    speak_text = last_msg["content"] if last_msg["role"] == "assistant" else None
-    voice.conversation_loop(
-        turn_id=str(len(st.session_state[hist_key])),
-        conv_key=f"chat_tutor_{name}",
-        speak_text=speak_text,
-    )
+    if voice.conversation_gate(f"chat_tutor_{name}"):
+        last_msg = st.session_state[hist_key][-1]
+        speak_text = last_msg["content"] if last_msg["role"] == "assistant" else None
+        voice.conversation_loop(
+            turn_id=str(len(st.session_state[hist_key])),
+            conv_key=f"chat_tutor_{name}",
+            speak_text=speak_text,
+        )
 else:
     mic_col, _ = st.columns([1, 8])
     with mic_col:
