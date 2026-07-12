@@ -145,7 +145,7 @@ export default function Home() {
   const canAfford = profile.coins >= profile.streak_freeze_cost
 
   return (
-    <div style={{ width: 390, minHeight: 844, margin: '0 auto', background: '#0B0B0D', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', maxWidth: 480, height: '100dvh', margin: '0 auto', background: '#0B0B0D', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ position: 'absolute', top: -140, left: -80, width: 360, height: 360, borderRadius: '50%', background: `radial-gradient(circle, ${hexToRgba(ACCENT, 0.28)} 0%, rgba(47,95,224,0) 70%)`, pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', top: 120, right: -120, width: 280, height: 280, borderRadius: '50%', background: `radial-gradient(circle, ${hexToRgba(ACCENT, 0.14)} 0%, rgba(47,95,224,0) 70%)`, pointerEvents: 'none' }} />
 
@@ -309,6 +309,20 @@ export default function Home() {
             </div>
             {buyFeedback && <div style={{ textAlign: 'center', fontSize: 12, color: accentLight, fontWeight: 600, marginBottom: 12 }}>{buyFeedback}</div>}
           </>
+        )}
+
+        {activeTab !== 'Learn' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '90px 24px', gap: 12 }}>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: hexToRgba(ACCENT, 0.14), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d={TAB_ICONS[activeTab]} />
+              </svg>
+            </div>
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 17 }}>{activeTab}</div>
+            <div style={{ fontSize: 13, color: '#9A9AA2', maxWidth: 240, lineHeight: 1.5 }}>
+              Home is live and wired to the real backend. {activeTab} is next up on the build list.
+            </div>
+          </div>
         )}
       </div>
 

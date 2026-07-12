@@ -2,13 +2,30 @@
 
 * { box-sizing: border-box; }
 
-html, body, #root {
+html, body {
   margin: 0;
   padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
   background: #05050a;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #fff;
-  min-height: 100vh;
+}
+
+#root {
+  height: 100dvh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width: 481px) {
+  #root {
+    align-items: center;
+  }
 }
 
 @keyframes pulse-ring {
