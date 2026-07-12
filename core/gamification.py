@@ -1,15 +1,8 @@
 """
 gamification.py
 -----------------
-XP, game levels, streak bonuses, badges, and quest rotation. Kept separate
-from the tutor engine so the reward math is easy to audit and retune.
-
-Badge/quest numeric thresholds below are deliberately kept in sync with
-the actual size of the content bank (core/content_bank.py) -- e.g. the
-"vocab_50" badge requires 50 words known, so the vocab bank needs at
-least 50 words or that badge is literally unreachable. If you add more
-vocabulary, scenarios, etc. via content_bank.py, feel free to raise these
-back up.
+XP, game levels, streak bonuses, badges, and quest rotation.
+Duolingo + Spotify Fusion Design
 """
 
 from __future__ import annotations
@@ -25,8 +18,12 @@ def award_xp(profile: dict, amount: int, activity: str) -> dict:
     profile["coins"] += max(1, amount // 3)
     storage.log_history(profile, activity, amount)
     new_level = compute_level(profile["xp"])
-    result = {"leveled_up": new_level > old_level, "old_level": old_level, "new_level": new_level,
-              "unlock": cb.LEVEL_UNLOCKS.get(new_level)}
+    result = {
+        "leveled_up": new_level > old_level,
+        "old_level": old_level,
+        "new_level": new_level,
+        "unlock": cb.LEVEL_UNLOCKS.get(new_level)
+    }
     return result
 
 
@@ -53,13 +50,11 @@ def xp_to_next_level(xp: int):
 
 
 def record_daily_login(profile: dict) -> int:
-    """Call once per page-load/session. Returns streak-milestone bonus XP (already added)."""
+    """Call once per page-load/session. Returns streak-milestone bonus XP."""
     before = profile["streak"]["last_active_date"]
     bonus = storage.touch_daily_activity(profile)
     after = profile["streak"]["last_active_date"]
     if after != before:
-        # A genuinely new calendar day of activity was just registered --
-        # counts toward the "Semaine d'immersion" weekly quest.
         bump_quest_progress(profile, "active_days", amount=1)
     if bonus:
         award_xp(profile, bonus, f"Streak bonus ({profile['streak']['current']} days) 🔥")
@@ -67,7 +62,7 @@ def record_daily_login(profile: dict) -> int:
 
 
 def new_badges(profile: dict) -> list:
-    """Check all badge conditions; award any newly-earned badges. Returns list of newly earned badge dicts."""
+    """Check all badge conditions; award any newly-earned badges."""
     earned = set(profile["badges"])
     newly = []
 
@@ -86,27 +81,30 @@ def new_badges(profile: dict) -> list:
         give("streak_7")
     if profile["streak"]["longest"] >= 30:
         give("streak_30")
-    if "cafe" in profile["scenarios_completed"]:
+    if "cafe" in profile.get("scenarios_completed", []):
         give("cafe_master")
-    if len(profile["scenarios_completed"]) >= len(cb.SCENARIOS):
+    if len(profile.get("scenarios_completed", [])) >= len(cb.SCENARIOS):
         give("scenario_5")
     if profile.get("stories_completed"):
         give("storyteller")
+
     quebec_words_known = sum(
-        1 for wid in profile["vocab_srs"] if (w := cb.vocab_by_id(wid)) and w["theme"] == "Quebec"
+        1 for wid in profile.get("vocab_srs", {}) 
+        if (w := cb.vocab_by_id(wid)) and w["theme"] == "Quebec"
     )
     quebec_words_total = sum(1 for v in cb.VOCAB if v["theme"] == "Quebec")
     if quebec_words_known >= quebec_words_total:
         give("quebec_explorer")
-    if profile["vocab_known_count"] >= min(20, len(cb.VOCAB)):
+
+    if profile.get("vocab_known_count", 0) >= min(20, len(cb.VOCAB)):
         give("vocab_50")
-    if profile["vocab_known_count"] >= min(30, len(cb.VOCAB)):
+    if profile.get("vocab_known_count", 0) >= min(30, len(cb.VOCAB)):
         give("vocab_100")
     if compute_level(profile["xp"]) >= 5:
         give("level_5")
     if compute_level(profile["xp"]) >= 10:
         give("level_10")
-    if profile["corrections_seen"] >= 20:
+    if profile.get("corrections_seen", 0) >= 20:
         give("corrector")
 
     return newly
@@ -124,9 +122,6 @@ def _week_index() -> int:
 
 
 def current_week_str() -> str:
-    """Year-qualified ISO week (e.g. '2026-W28') -- the shared key used to
-    decide quest slot rotation. Year-qualified so week 1 of a new year is
-    never confused with week 1 of the previous year."""
     iso = date.today().isocalendar()
     return f"{iso[0]}-W{iso[1]}"
 
@@ -156,11 +151,7 @@ def ensure_quest_slots(profile: dict) -> None:
 
 
 def bump_quest_progress(profile: dict, kind: str, amount: int = 1, target_value=None) -> list:
-    """
-    Advance quest progress for a given event `kind` (e.g. 'chat_count',
-    'scenario', 'vocab_review', 'story', 'active_days', 'vocab_theme',
-    'scenario_count'). Returns list of completed-quest dicts (for celebration UI).
-    """
+    """Advance quest progress for a given event kind."""
     ensure_quest_slots(profile)
     completed = []
     for slot_name, quest_lookup in (("daily", cb.QUESTS_DAILY), ("weekly", cb.QUESTS_WEEKLY)):
@@ -174,11 +165,6 @@ def bump_quest_progress(profile: dict, kind: str, amount: int = 1, target_value=
             if target_value == quest["target"]:
                 slot["done"] = True
         elif kind == "scenario_count":
-            # Quest copy promises N *different* scenarios (e.g. "Termine 3
-            # jeux de rôle différents") -- track distinct scenario ids seen
-            # this week rather than a raw completion counter, otherwise
-            # resetting and refinishing the same scenario repeatedly would
-            # satisfy a quest that's explicitly about variety.
             seen = slot.setdefault("scenario_ids_seen", [])
             if target_value is not None and target_value not in seen:
                 seen.append(target_value)
@@ -194,6 +180,3 @@ def bump_quest_progress(profile: dict, kind: str, amount: int = 1, target_value=
             profile["coins"] += quest["coins"]
             completed.append(quest)
     return completed
-
-
-
