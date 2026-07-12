@@ -1,12 +1,10 @@
 """
-Page: Chat Tutor -- free-form conversation with the French tutor. Uses
-real Claude API conversation when a key is configured (Settings page),
-and transparently falls back to the offline rule-based engine otherwise.
+Page: Chat Tutor -- free conversation with your French tutor.
+PREMIUM EDITION — Duolingo + Spotify Fusion
 """
 
-from datetime import date
 import streamlit as st
-from core import ui, gamification as game, tutor_engine, content_bank as cb, ai_client, voice
+from core import ui, gamification as game, tutor_engine, ai_client, voice
 
 st.set_page_config(page_title="Chat Tutor", page_icon="💬", layout="wide")
 ui.init_app_state()
@@ -14,109 +12,158 @@ profile = ui.require_profile()
 ui.sidebar_switcher()
 name = st.session_state.active_profile
 
-st.title("💬 Chat Tutor")
-st.caption("Answer however you can -- what matters is trying!")
+# ============================================================
+# HERO HEADER
+# ============================================================
+st.markdown(f"""
+<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px;">
+    <div style="font-size: 2.5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">💬</div>
+    <div>
+        <h1 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 2rem;">
+            Chat Tutor
+        </h1>
+        <p style="margin: 4px 0 0; color: #9A9AAF; font-size: 1rem;">
+            Free conversation in French — AI-adaptive or offline mode
+        </p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="premium-divider"></div>', unsafe_allow_html=True)
+
+# Voice toggle
 conv_on = voice.conversation_toggle(f"conv_mode_chat_{name}")
 if conv_on:
-    st.caption("🎙️ Conversation mode is on -- just talk, pause when you're done, and the tutor will answer out loud.")
+    st.caption("🎙️ Conversation mode is on — just talk, pause when you're done, and the tutor will answer out loud.")
 else:
-    st.caption("Type, or turn on conversation mode above to talk hands-free.")
+    st.caption("Type your message, or turn on conversation mode above to talk hands-free.")
 
+# AI status in sidebar
+ai_mode = ai_client.is_configured()
 with st.sidebar:
     st.markdown("---")
-    if ai_client.is_configured():
-        st.success(f"🤖 AI enabled ({ai_client.get_model()})")
+    if ai_mode:
+        st.success(f"🤖 Adaptive AI tutor ({ai_client.get_model()})")
     else:
-        st.warning("📴 Offline mode (no API key)")
-        st.caption("Add a key in **Settings** for truly adaptive conversation.")
-    st.markdown("### 💡 Grammar tip of the day")
-    tips = cb.GRAMMAR_TIPS.get(profile["level"], cb.GRAMMAR_TIPS["A1"])
-    tip_title, tip_body = tips[date.today().toordinal() % len(tips)]
-    st.markdown(f"**{tip_title}**")
-    st.caption(tip_body)
+        st.warning("📴 Offline mode (rule-based replies)")
 
-hist_key = f"chat_history_{name}"
-last_prompt_key = f"last_prompt_{name}"
-celebration_key = f"celebration_{name}"
+# ============================================================
+# CHAT HISTORY
+# ============================================================
+chat_key = f"chat_history_{name}"
+last_prompt_key = f"chat_last_prompt_{name}"
 
-if hist_key not in st.session_state:
+if chat_key not in st.session_state:
+    st.session_state[chat_key] = []
+if last_prompt_key not in st.session_state:
+    st.session_state[last_prompt_key] = None
+
+history = st.session_state[chat_key]
+
+# Display existing messages
+for i, msg in enumerate(history):
+    if msg["role"] == "assistant":
+        with st.chat_message("assistant", avatar="🎓"):
+            st.markdown(msg["content"])
+            voice.speak_button(msg["content"], key=f"chat_speak_{name}_{i}")
+            if msg.get("hint_en"):
+                st.caption(f"💡 {msg['hint_en']}")
+            if msg.get("corrections"):
+                with st.container(border=True):
+                    st.markdown("**✏️ Friendly corrections:**")
+                    for c in msg["corrections"]:
+                        st.markdown(f"- *« {c['matched']} »* → **« {c['suggestion']} »**")
+                        st.caption(c["explanation"])
+            if msg.get("new_vocab"):
+                with st.container(border=True):
+                    st.markdown("**📚 New vocabulary:**")
+                    for v in msg["new_vocab"]:
+                        st.markdown(f"- **{v['fr']}** = {v['en']}")
+    else:
+        with st.chat_message("user", avatar=profile["avatar"]):
+            st.markdown(msg["content"])
+
+# Opening line if empty
+if not history:
     opening = tutor_engine.opening_line(profile["level"], name)
-    st.session_state[hist_key] = [{"role": "assistant", "content": opening}]
-    st.session_state[last_prompt_key] = opening
+    with st.chat_message("assistant", avatar="🎓"):
+        st.markdown(opening)
+        voice.speak_button(opening, key=f"chat_opening_{name}")
+    st.session_state[chat_key].append({
+        "role": "assistant",
+        "content": opening,
+        "hint_en": None,
+        "corrections": [],
+        "new_vocab": [],
+    })
 
-# Show any celebration queued from the previous turn (level-up, badge, quest)
-pending = st.session_state.pop(celebration_key, None)
-if pending:
-    if pending.get("ai_error"):
-        st.info("ℹ️ The AI didn't respond this time (see details below) -- offline reply used instead.")
-        with st.expander("Technical detail"):
-            st.code(pending["ai_error"])
-    ui.show_level_up(pending["xp_result"])
-    ui.show_new_badges(pending["newly"])
-    for q in pending["quests"]:
-        st.success(f"🎯 Quest completed: **{q['title']}**! +{q['xp']} XP, +{q['coins']} coins.")
-
-for i, msg in enumerate(st.session_state[hist_key]):
-    with st.chat_message(msg["role"], avatar=(profile["avatar"] if msg["role"] == "user" else "🇫🇷")):
-        st.markdown(msg["content"])
-        if msg["role"] == "assistant":
-            voice.speak_button(msg["content"], key=f"chat_tutor_{name}_{i}")
-        if msg.get("hint_en"):
-            st.caption(f"💭 {msg['hint_en']}")
-        if msg.get("new_vocab"):
-            st.caption("🆕 " + " • ".join(f"**{v['fr']}** ({v['en']})" for v in msg["new_vocab"]))
-        if msg.get("corrections"):
-            with st.container(border=True):
-                st.markdown("**✏️ Friendly note:**")
-                for c in msg["corrections"]:
-                    st.markdown(f"- You wrote *« {c['matched']} »* → it's more natural as **« {c['suggestion']} »**")
-                    st.caption(c["explanation"])
-
+# ============================================================
+# INPUT AREA
+# ============================================================
+mic_text = None
 if conv_on:
-    if voice.conversation_gate(f"chat_tutor_{name}"):
-        last_msg = st.session_state[hist_key][-1]
-        speak_text = last_msg["content"] if last_msg["role"] == "assistant" else None
+    if voice.conversation_gate(f"chat_ai_{name}"):
+        if history:
+            last_msg = history[-1]
+            speak_text = last_msg["content"] if last_msg["role"] == "assistant" else None
+        else:
+            speak_text = None
         voice.conversation_loop(
-            turn_id=str(len(st.session_state[hist_key])),
-            conv_key=f"chat_tutor_{name}",
+            turn_id=str(len(history)),
+            conv_key=f"chat_ai_{name}",
             speak_text=speak_text,
         )
 else:
     mic_col, _ = st.columns([1, 8])
     with mic_col:
-        mic_text = voice.mic_input(f"chat_tutor_mic_{name}") if voice.mic_available() else None
+        mic_text = voice.mic_input(f"chat_mic_{name}") if voice.mic_available() else None
 
-user_text = (mic_text if not conv_on else None) or st.chat_input("Write your reply in French...")
+user_input = mic_text or st.chat_input("Write in French...")
 
-if user_text:
-    st.session_state[hist_key].append({"role": "user", "content": user_text})
+if user_input:
+    # Add user message
+    st.session_state[chat_key].append({"role": "user", "content": user_input})
 
-    # Plain-text history (no metadata) for the AI's conversational context
-    plain_history = [{"role": m["role"], "content": m["content"]} for m in st.session_state[hist_key][:-1]]
+    # Build plain-text history for the AI
+    plain_history = [
+        {"role": m["role"], "content": m["content"]}
+        for m in history[-12:]
+    ]
 
-    result = tutor_engine.respond(
-        user_text, profile["level"], name=name, history=plain_history,
-        last_prompt=st.session_state.get(last_prompt_key),
-    )
+    # Get response
+    try:
+        result = tutor_engine.respond(
+            user_input, profile["level"], name, plain_history,
+            st.session_state[last_prompt_key]
+        )
+    except Exception as e:
+        result = tutor_engine.respond_rulebased(user_input, profile["level"], st.session_state[last_prompt_key])
+        result["ai_error"] = str(e)
 
+    # Track last prompt
+    st.session_state[last_prompt_key] = result.get("reply")
+
+    # Add assistant response
+    st.session_state[chat_key].append({
+        "role": "assistant",
+        "content": result["reply"],
+        "hint_en": result.get("hint_en"),
+        "corrections": result.get("corrections", []),
+        "new_vocab": result.get("new_vocab", []),
+        "source": result.get("source", "unknown"),
+    })
+
+    # Gamification
     profile["messages_sent"] += 1
-    xp_result = game.award_xp(profile, 3, "Message sent in Chat")
-    quest_done = game.bump_quest_progress(profile, "chat_count", amount=1)
+    xp_result = game.award_xp(profile, 3, "Chat message")
+    game.bump_quest_progress(profile, "chat_count", amount=1)
 
-    if result["corrections"]:
+    if result.get("corrections"):
         profile["corrections_seen"] += len(result["corrections"])
 
-    st.session_state[hist_key].append({
-        "role": "assistant", "content": result["reply"],
-        "hint_en": result.get("hint_en"), "corrections": result["corrections"],
-        "new_vocab": result.get("new_vocab", []),
-    })
-    st.session_state[last_prompt_key] = result["reply"]
-
     newly = game.new_badges(profile)
-    st.session_state[celebration_key] = {
-        "xp_result": xp_result, "newly": newly, "quests": quest_done,
-        "ai_error": result.get("ai_error"),
-    }
     ui.save()
+    ui.show_new_badges(newly)
+    ui.show_level_up(xp_result)
+
     st.rerun()
