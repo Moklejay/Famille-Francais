@@ -145,7 +145,7 @@ export default function Home() {
   const canAfford = profile.coins >= profile.streak_freeze_cost
 
   return (
-    <div style={{ width: '100%', maxWidth: 480, height: '100dvh', margin: '0 auto', background: '#0B0B0D', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', maxWidth: 480, minWidth: 0, height: '100dvh', margin: '0 auto', background: '#0B0B0D', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ position: 'absolute', top: -140, left: -80, width: 360, height: 360, borderRadius: '50%', background: `radial-gradient(circle, ${hexToRgba(ACCENT, 0.28)} 0%, rgba(47,95,224,0) 70%)`, pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', top: 120, right: -120, width: 280, height: 280, borderRadius: '50%', background: `radial-gradient(circle, ${hexToRgba(ACCENT, 0.14)} 0%, rgba(47,95,224,0) 70%)`, pointerEvents: 'none' }} />
 
