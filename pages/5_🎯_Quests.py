@@ -1,6 +1,6 @@
 """
 Page: Quests -- daily quest, weekly quest, and the full badge gallery
-PREMIUM EDITION — Duolingo + Spotify Fusion
+(locked + unlocked) for motivation.
 """
 
 from datetime import date
@@ -13,72 +13,36 @@ profile = ui.require_profile()
 ui.sidebar_switcher()
 db = st.session_state.db
 
-# Get theme colors
-theme_name = profile.get("theme", "Neon Green")
-t = ui.THEMES.get(theme_name, ui.THEMES["Neon Green"])
-primary = t["primary"]
-success = "#58CC02"  # Keep success green as a semantic color (not theme-dependent)
-
-# ============================================================
-# HERO HEADER
-# ============================================================
-st.markdown(f"""
-<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px;">
-    <div style="font-size: 2.5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">🎯</div>
-    <div>
-        <h1 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 2rem;">
-            Quests & Challenges
-        </h1>
-        <p style="margin: 4px 0 0; color: #9A9AAF; font-size: 1rem;">
-            Daily and weekly challenges to keep your streak alive
-        </p>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown('<div class="premium-divider"></div>', unsafe_allow_html=True)
-
-# ============================================================
-# DAILY & WEEKLY QUEST CARDS
-# ============================================================
+st.title("🎯 Quests & Challenges")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("☀️ Today's Quest")
+    st.subheader("☀️ Today's quest")
     daily = profile["quests"]["daily"]
     quest = next((q for q in cb.QUESTS_DAILY if q["id"] == daily["quest_id"]), None)
     if quest is None:
+        # The stored quest_id doesn't match anything in today's content bank
+        # (e.g. content_bank.py's quest list changed after this slot was
+        # assigned). Self-heal by re-rolling today's slot instead of
+        # crashing the whole page -- mirrors the defensive lookup pattern
+        # already used in gamification.bump_quest_progress().
         quest = game.get_todays_daily_quest()
         profile["quests"]["daily"] = {"date": date.today().isoformat(), "quest_id": quest["id"],
                                        "done": False, "progress": 0}
         daily = profile["quests"]["daily"]
         ui.save()
-
-    progress = daily.get("progress", 0)
-    is_done = daily["done"]
-    card_class = "quest-card completed" if is_done else "quest-card"
-    progress_pct = min(1.0, progress / quest["target"]) if quest["type"] != "scenario" else (1.0 if is_done else 0.0)
-
-    st.markdown(f"""
-    <div class="{card_class}">
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-            <div style="font-size: 2.5rem;">{'✅' if is_done else '🎯'}</div>
-            <div>
-                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: 800;">{quest['title']}</h3>
-                <p style="margin: 4px 0 0; color: #9A9AAF;">{quest['desc']}</p>
-            </div>
-        </div>
-        {f'<div style="background: {success}; color: #fff; padding: 8px 16px; border-radius: 999px; display: inline-block; font-family: Outfit, sans-serif; font-weight: 800;">✓ Completed!</div>' if is_done else ''}
-    </div>
-    """, unsafe_allow_html=True)
-
-    if not is_done and quest["type"] != "scenario":
-        st.progress(progress_pct, text=f"{min(progress, quest['target'])}/{quest['target']}")
-    st.caption(f"Reward: +{quest['xp']} XP, +{quest['coins']} 🪙")
+    with st.container(border=True):
+        st.markdown(f"**{quest['title']}**")
+        st.write(quest["desc"])
+        progress = daily.get("progress", 0)
+        if quest["type"] != "scenario":
+            st.progress(min(1.0, progress / quest["target"]), text=f"{min(progress, quest['target'])}/{quest['target']}")
+        st.caption(f"Reward: +{quest['xp']} XP, +{quest['coins']} 🪙")
+        st.markdown("✅ **Done!**" if daily["done"] else "⏳ In progress...")
 
 with col2:
-    st.subheader("📅 This Week's Quest")
+    st.subheader("📅 This week's quest")
     weekly = profile["quests"]["weekly"]
     wquest = next((q for q in cb.QUESTS_WEEKLY if q["id"] == weekly["quest_id"]), None)
     if wquest is None:
@@ -87,57 +51,23 @@ with col2:
         profile["quests"]["weekly"] = {"week": week, "quest_id": wquest["id"], "done": False, "progress": 0}
         weekly = profile["quests"]["weekly"]
         ui.save()
+    with st.container(border=True):
+        st.markdown(f"**{wquest['title']}**")
+        st.write(wquest["desc"])
+        progress = weekly.get("progress", 0)
+        st.progress(min(1.0, progress / wquest["target"]), text=f"{min(progress, wquest['target'])}/{wquest['target']}")
+        st.caption(f"Reward: +{wquest['xp']} XP, +{wquest['coins']} 🪙")
+        st.markdown("✅ **Done!**" if weekly["done"] else "⏳ In progress...")
 
-    w_progress = weekly.get("progress", 0)
-    w_is_done = weekly["done"]
-    w_card_class = "quest-card completed" if w_is_done else "quest-card"
-    w_progress_pct = min(1.0, w_progress / wquest["target"])
+st.divider()
+st.subheader("🏅 Badge gallery")
+st.caption("Unlocked badges in color, upcoming ones in gray.")
 
-    st.markdown(f"""
-    <div class="{w_card_class}">
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-            <div style="font-size: 2.5rem;">{'✅' if w_is_done else '📅'}</div>
-            <div>
-                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: 800;">{wquest['title']}</h3>
-                <p style="margin: 4px 0 0; color: #9A9AAF;">{wquest['desc']}</p>
-            </div>
-        </div>
-        {f'<div style="background: {success}; color: #fff; padding: 8px 16px; border-radius: 999px; display: inline-block; font-family: Outfit, sans-serif; font-weight: 800;">✓ Completed!</div>' if w_is_done else ''}
-    </div>
-    """, unsafe_allow_html=True)
-
-    if not w_is_done:
-        st.progress(w_progress_pct, text=f"{min(w_progress, wquest['target'])}/{wquest['target']}")
-    st.caption(f"Reward: +{wquest['xp']} XP, +{wquest['coins']} 🪙")
-
-st.markdown('<div class="premium-divider"></div>', unsafe_allow_html=True)
-
-# ============================================================
-# BADGE GALLERY
-# ============================================================
-
-st.subheader("🏅 Badge Gallery")
-st.caption("Earn badges by completing activities and reaching milestones")
-
-# Create rows of 4 badges each
-for row_start in range(0, len(cb.BADGES), 4):
-    cols = st.columns(4)
-    for i in range(4):
-        idx = row_start + i
-        if idx >= len(cb.BADGES):
-            break
-        badge = cb.BADGES[idx]
-        unlocked = badge["id"] in profile["badges"]
-        with cols[i]:
-            status_class = "unlocked" if unlocked else "locked"
-            lock_icon = "" if unlocked else '<div style="position: absolute; top: 8px; right: 8px; font-size: 1rem;">🔒</div>'
-            st.markdown(f"""
-            <div style="position: relative;">
-                {lock_icon}
-                <div class="badge-pill {status_class}">
-                    <div class="emoji">{badge['emoji']}</div>
-                    <div class="name">{badge['name']}</div>
-                    <div style="font-size: 0.7rem; color: #6A6A6A; margin-top: 4px;">{badge['desc']}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+cols = st.columns(4)
+for i, badge in enumerate(cb.BADGES):
+    unlocked = badge["id"] in profile["badges"]
+    with cols[i % 4]:
+        with st.container(border=True):
+            st.markdown(f"## {badge['emoji'] if unlocked else '🔒'}")
+            st.markdown(f"**{badge['name']}**" if unlocked else f"*{badge['name']}*")
+            st.caption(badge["desc"])
