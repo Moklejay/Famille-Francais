@@ -1,6 +1,6 @@
 """
 Page: Quests -- daily quest, weekly quest, and the full badge gallery
-Duolingo + Spotify Fusion Design
+PREMIUM EDITION — Duolingo + Spotify Fusion
 """
 
 from datetime import date
@@ -13,10 +13,33 @@ profile = ui.require_profile()
 ui.sidebar_switcher()
 db = st.session_state.db
 
-st.title("🎯 Quests & Challenges")
+# Get theme colors
+theme_name = profile.get("theme", "Neon Green")
+t = ui.THEMES.get(theme_name, ui.THEMES["Neon Green"])
+primary = t["primary"]
+success = "#58CC02"  # Keep success green as a semantic color (not theme-dependent)
 
 # ============================================================
-# DAILY & WEEKLY QUEST CARDS - Side by side
+# HERO HEADER
+# ============================================================
+st.markdown(f"""
+<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px;">
+    <div style="font-size: 2.5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">🎯</div>
+    <div>
+        <h1 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 2rem;">
+            Quests & Challenges
+        </h1>
+        <p style="margin: 4px 0 0; color: #9A9AAF; font-size: 1rem;">
+            Daily and weekly challenges to keep your streak alive
+        </p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="premium-divider"></div>', unsafe_allow_html=True)
+
+# ============================================================
+# DAILY & WEEKLY QUEST CARDS
 # ============================================================
 
 col1, col2 = st.columns(2)
@@ -42,11 +65,11 @@ with col1:
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
             <div style="font-size: 2.5rem;">{'✅' if is_done else '🎯'}</div>
             <div>
-                <h3 style="margin: 0; font-family: 'Nunito', sans-serif; font-weight: 800;">{quest['title']}</h3>
-                <p style="margin: 4px 0 0; color: #A7A7A7;">{quest['desc']}</p>
+                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: 800;">{quest['title']}</h3>
+                <p style="margin: 4px 0 0; color: #9A9AAF;">{quest['desc']}</p>
             </div>
         </div>
-        {f'<div style="background: #58CC02; color: #fff; padding: 8px 16px; border-radius: 999px; display: inline-block; font-family: Nunito; font-weight: 800;">✓ Completed!</div>' if is_done else ''}
+        {f'<div style="background: {success}; color: #fff; padding: 8px 16px; border-radius: 999px; display: inline-block; font-family: Outfit, sans-serif; font-weight: 800;">✓ Completed!</div>' if is_done else ''}
     </div>
     """, unsafe_allow_html=True)
 
@@ -75,11 +98,11 @@ with col2:
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
             <div style="font-size: 2.5rem;">{'✅' if w_is_done else '📅'}</div>
             <div>
-                <h3 style="margin: 0; font-family: 'Nunito', sans-serif; font-weight: 800;">{wquest['title']}</h3>
-                <p style="margin: 4px 0 0; color: #A7A7A7;">{wquest['desc']}</p>
+                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: 800;">{wquest['title']}</h3>
+                <p style="margin: 4px 0 0; color: #9A9AAF;">{wquest['desc']}</p>
             </div>
         </div>
-        {f'<div style="background: #58CC02; color: #fff; padding: 8px 16px; border-radius: 999px; display: inline-block; font-family: Nunito; font-weight: 800;">✓ Completed!</div>' if w_is_done else ''}
+        {f'<div style="background: {success}; color: #fff; padding: 8px 16px; border-radius: 999px; display: inline-block; font-family: Outfit, sans-serif; font-weight: 800;">✓ Completed!</div>' if w_is_done else ''}
     </div>
     """, unsafe_allow_html=True)
 
@@ -87,10 +110,10 @@ with col2:
         st.progress(w_progress_pct, text=f"{min(w_progress, wquest['target'])}/{wquest['target']}")
     st.caption(f"Reward: +{wquest['xp']} XP, +{wquest['coins']} 🪙")
 
-st.divider()
+st.markdown('<div class="premium-divider"></div>', unsafe_allow_html=True)
 
 # ============================================================
-# BADGE GALLERY - Duolingo-style grid with locked/unlocked states
+# BADGE GALLERY
 # ============================================================
 
 st.subheader("🏅 Badge Gallery")

@@ -1,13 +1,13 @@
 """
 Page: Settings & Export
-Duolingo + Spotify Fusion Design
+PREMIUM EDITION — Duolingo + Spotify Fusion
 """
 
 import json
 import os
-from datetime import date
 import streamlit as st
 from core import ui, storage, ai_client, gamification as game, content_bank as cb
+from datetime import date
 
 st.set_page_config(page_title="Settings", page_icon="⚙️", layout="wide")
 ui.init_app_state()
@@ -15,7 +15,31 @@ profile = ui.require_profile()
 ui.sidebar_switcher()
 db = st.session_state.db
 
-st.title("⚙️ Settings & Export")
+# Get theme colors
+theme_name = profile.get("theme", "Neon Green")
+t = ui.THEMES.get(theme_name, ui.THEMES["Neon Green"])
+primary = t["primary"]
+success = "#58CC02"
+warning = "#FF9600"
+
+# ============================================================
+# HERO HEADER
+# ============================================================
+st.markdown(f"""
+<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px;">
+    <div style="font-size: 2.5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">⚙️</div>
+    <div>
+        <h1 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 2rem;">
+            Settings & Export
+        </h1>
+        <p style="margin: 4px 0 0; color: #9A9AAF; font-size: 1rem;">
+            Profile, AI tutor, backup, and danger zone
+        </p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="premium-divider"></div>', unsafe_allow_html=True)
 
 # ============================================================
 # PROFILE SETTINGS CARD
@@ -53,7 +77,7 @@ with st.container():
         st.success("Profile updated! 🎉")
         st.rerun()
 
-st.divider()
+st.markdown('<div class="premium-divider"></div>', unsafe_allow_html=True)
 
 # ============================================================
 # AI API KEY CARD
@@ -69,25 +93,25 @@ with st.container():
 
     if current_key:
         st.markdown(f"""
-        <div style="background: #181818; border: 2px solid rgba(88,204,2,0.3); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+        <div style="background: #111118; border: 2px solid {primary}30; border-radius: 16px; padding: 16px; margin-bottom: 16px;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                 <div style="font-size: 1.5rem;">✅</div>
-                <div style="font-family: 'Nunito', sans-serif; font-weight: 800; color: #58CC02;">AI is active</div>
+                <div style="font-family: 'Outfit', sans-serif; font-weight: 800; color: {primary};">AI is active</div>
             </div>
-            <div style="color: #A7A7A7; font-size: 0.9rem;">
+            <div style="color: #9A9AAF; font-size: 0.9rem;">
                 Model: <strong>{current_model}</strong><br>
                 Key source: {key_source}
             </div>
         </div>
         """, unsafe_allow_html=True)
     else:
-        st.markdown("""
-        <div style="background: #181818; border: 2px solid rgba(255,150,0,0.3); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+        st.markdown(f"""
+        <div style="background: #111118; border: 2px solid {warning}30; border-radius: 16px; padding: 16px; margin-bottom: 16px;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                 <div style="font-size: 1.5rem;">📴</div>
-                <div style="font-family: 'Nunito', sans-serif; font-weight: 800; color: #FF9600;">Offline mode</div>
+                <div style="font-family: 'Outfit', sans-serif; font-weight: 800; color: {warning};">Offline mode</div>
             </div>
-            <div style="color: #A7A7A7; font-size: 0.9rem;">
+            <div style="color: #9A9AAF; font-size: 0.9rem;">
                 The app works without a key using rule-based responses. Add a key for adaptive AI.
             </div>
         </div>
@@ -124,7 +148,7 @@ with st.container():
             st.success("Key cleared! ✅")
             st.rerun()
 
-st.divider()
+st.markdown('<div class="premium-divider"></div>', unsafe_allow_html=True)
 
 # ============================================================
 # BACKUP / EXPORT CARD
@@ -160,19 +184,19 @@ with st.container():
 
     # Gist status
     if storage.gist_configured():
-        st.markdown("""
-        <div style="background: #181818; border: 2px solid rgba(88,204,2,0.2); border-radius: 12px; padding: 12px; margin-top: 12px;">
-            <span style="color: #58CC02;">✅</span> Persistent backup enabled (GitHub Gist)
+        st.markdown(f"""
+        <div style="background: #111118; border: 2px solid {primary}20; border-radius: 12px; padding: 12px; margin-top: 12px;">
+            <span style="color: {primary};">✅</span> Persistent backup enabled (GitHub Gist)
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown("""
-        <div style="background: #181818; border: 2px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px; margin-top: 12px;">
-            <span style="color: #A7A7A7;">💡</span> For hosted deployment, add GITHUB_TOKEN and GIST_ID to Streamlit secrets for persistent backup.
+        <div style="background: #111118; border: 2px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px; margin-top: 12px;">
+            <span style="color: #9A9AAF;">💡</span> For hosted deployment, add GITHUB_TOKEN and GIST_ID to Streamlit secrets for persistent backup.
         </div>
         """, unsafe_allow_html=True)
 
-st.divider()
+st.markdown('<div class="premium-divider"></div>', unsafe_allow_html=True)
 
 # ============================================================
 # DANGER ZONE
