@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+    @keyframes ff-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(47,95,224,0.45); }
+      70% { box-shadow: 0 0 0 22px rgba(47,95,224,0); }
+      100% { box-shadow: 0 0 0 0 rgba(47,95,224,0); }
+    }
+    @keyframes ff-pulse-ring {
+      0% { transform: scale(1); opacity: 0.55; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+    body { margin: 0; background: #05050a; }
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+
+<div data-screen-label="Home / Lesson" style="width:390px;height:844px;margin:0 auto;position:relative;background:#0B0B0D;color:#FFFFFF;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden;display:flex;flex-direction:column;border-radius:0px;">
+
+  <!-- Themed wallpaper (level-unlocked themes) -->
+  <sc-if value="{{ hasWallpaper }}" hint-placeholder-val="{{ false }}">
+    <img src="{{ wallpaperSrc }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.85;pointer-events:none;" />
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,11,13,0.2) 0%, rgba(11,11,13,0.55) 55%, #0B0B0D 100%);pointer-events:none;"></div>
+  </sc-if>
+
+  <!-- ambient glow -->
+  <sc-if value="{{ hasNoWallpaper }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;top:-140px;left:-80px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle, {{ accent28 }} 0%, rgba(47,95,224,0) 70%);pointer-events:none;"></div>
+    <div style="position:absolute;top:120px;right:-120px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle, {{ accent14 }} 0%, rgba(47,95,224,0) 70%);pointer-events:none;"></div>
+  </sc-if>
+
+  <!-- ===================== SCROLLABLE CONTENT ===================== -->
+  <div style="position:relative;flex:1;overflow-y:auto;padding:22px 20px 12px 20px;box-sizing:border-box;">
+
+    <!-- Header (shared across tabs) -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+        <div style="width:52px;height:52px;border-radius:50%;border:2px solid {{ accent55 }};flex-shrink:0;overflow:hidden;background:#181818;display:flex;align-items:center;justify-content:center;font-size:24px;">
+          <sc-if value="{{ profileAvatarIsPhoto }}" hint-placeholder-val="{{ true }}">
+            <img src="{{ profilePhotoSrc }}" alt="avatar" style="width:100%;height:100%;object-fit:cover;display:block;" />
+          </sc-if>
+          <sc-if value="{{ profileAvatarEmoji }}" hint-placeholder-val="{{ false }}">
+            <span>{{ profileAvatarEmoji }}</span>
+          </sc-if>
+        </div>
+        <div style="min-width:0;overflow:hidden;">
+          <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:19px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ greeting }}</div>
+          <div style="font-size:13px;color:#9A9AA2;font-weight:500;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Niveau {{ level }} · {{ cefr }}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:5px;background:#181818;border:1px solid rgba(255,255,255,0.08);border-radius:999px;padding:7px 12px;white-space:nowrap;">
+          <span style="font-weight:700;font-size:13px;white-space:nowrap;">🔥 {{ streak }} days</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;background:#181818;border:1px solid rgba(255,255,255,0.08);border-radius:999px;padding:7px 12px;white-space:nowrap;">
+          <img src="coin-daisy.png" alt="coin" style="width:16px;height:16px;border-radius:50%;display:block;" />
+          <span style="font-weight:700;font-size:13px;">{{ coins }}</span>
+        </div>
+      </div>
+    </div>
+
+<sc-if value="{{ isLearn }}" hint-placeholder-val="{{ true }}">
+    <!-- Progress block: XP ring + today's session -->
+    <div style="display:flex;align-items:center;gap:16px;background:rgba(10,10,12,0.96);box-shadow:0 8px 22px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.09);border-radius:20px;padding:16px;margin-bottom:16px;">
+      <div style="position:relative;width:84px;height:84px;flex-shrink:0;border-radius:50%;background:{{ ringGradient }};display:flex;align-items:center;justify-content:center;">
+        <div style="width:64px;height:64px;border-radius:50%;background:#141417;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div style="font-family:'Poppins',sans-serif;font-weight:800;font-size:20px;line-height:1;">{{ level }}</div>
+          <div style="font-size:9px;color:#7C7C86;letter-spacing:0.04em;margin-top:2px;">LEVEL</div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:12px;color:#9A9AA2;font-weight:600;">{{ xpToNext }} XP to level {{ nextLevel }}</span>
+        </div>
+        <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;margin-bottom:12px;">
+          <div style="height:100%;width:{{ xpPercent }};background:{{ accent }};border-radius:999px;"></div>
+        </div>
+        <div style="font-size:12px;color:#9A9AA2;font-weight:600;margin-bottom:6px;">Today's session</div>
+        <div style="display:flex;gap:5px;">
+          <sc-for list="{{ sessionDots }}" as="dot" hint-placeholder-count="3">
+            <div style="flex:1;height:5px;border-radius:999px;background:{{ dot.color }};"></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- Track toggle -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <div onClick="{{ toggleTrack }}" style="display:flex;align-items:center;background:#181818;border:1px solid rgba(255,255,255,0.08);border-radius:999px;padding:4px;cursor:pointer;">
+        <div style="padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;background:{{ metroActiveBg }};color:{{ metroActiveColor }};transition:all 0.15s ease;">🇫🇷 France</div>
+        <div style="padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;background:{{ quebecActiveBg }};color:{{ quebecActiveColor }};transition:all 0.15s ease;">🍁 Québec</div>
+      </div>
+    </div>
+
+    <!-- Hero lesson card -->
+    <div style="position:relative;border-radius:22px;overflow:hidden;height:190px;margin-bottom:20px;background:repeating-linear-gradient(135deg, #1b1f2e, #1b1f2e 10px, #20263a 10px, #20263a 20px);border:1px solid rgba(255,255,255,0.07);">
+      <img src="{{ scenePhotoSrc }}" alt="scene" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:{{ scenePhotoPosition }};" />
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,11,13,0) 35%, rgba(11,11,13,0.92) 100%);"></div>
+      <div style="position:absolute;left:18px;right:18px;bottom:16px;">
+        <div style="display:inline-block;background:{{ accent90 }};border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700;letter-spacing:0.02em;margin-bottom:8px;">{{ sessionType }}</div>
+        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:21px;line-height:1.2;">{{ sessionTitle }}</div>
+        <div style="font-size:12.5px;color:#C7C7CE;margin-top:4px;">{{ sessionMeta }}</div>
+      </div>
+    </div>
+
+    <!-- Voice CTA -->
+    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:6px 0 22px 0;">
+      <div style="position:relative;width:100%;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+
+        <!-- mascot guide -->
+        <div style="position:absolute;left:6px;bottom:-10px;">
+          <img src="mascot-fox.png" alt="mascot" style="width:68px;height:auto;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,0.45));" />
+        </div>
+
+        <div style="position:relative;width:132px;height:132px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;inset:0;border-radius:50%;border:2px solid {{ accent45 }};animation:ff-pulse-ring 2.2s ease-out infinite;"></div>
+          <div style="position:absolute;inset:10px;border-radius:50%;border:2px solid {{ accent30 }};animation:ff-pulse-ring 2.2s ease-out 0.4s infinite;"></div>
+          <div onClick="{{ toggleListening }}" style="position:relative;width:104px;height:104px;border-radius:50%;background:{{ micBg }};display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 30px rgba(47,95,224,0.45);animation:{{ micAnim }};">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+              <rect x="9" y="2" width="6" height="12" rx="3" fill="white"></rect>
+              <path d="M5 11a7 7 0 0 0 14 0" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"></path>
+              <line x1="12" y1="18" x2="12" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"></line>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;margin-bottom:4px;">{{ micStatusTitle }}</div>
+      <div style="font-size:13px;color:#9A9AA2;max-width:260px;line-height:1.4;">{{ micStatusSub }}</div>
+      <div onClick="{{ toggleTextFallback }}" style="margin-top:14px;font-size:12.5px;color:{{ accentLight }};font-weight:600;text-decoration:underline;cursor:pointer;">{{ textLinkLabel }}</div>
+      <sc-if value="{{ textFallbackOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;width:100%;margin-top:12px;">
+          <input type="text" value="{{ textDraft }}" onChange="{{ setTextDraft }}" onKeyDown="{{ handleTextKeyDown }}" placeholder="Écris ton message…" style="flex:1;background:#181818;border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:10px 16px;color:white;font-size:13px;font-family:'Inter',sans-serif;outline:none;" />
+          <div onClick="{{ sendTextMessage }}" style="background:{{ accent }};color:white;font-size:12.5px;font-weight:700;border-radius:999px;padding:10px 18px;cursor:pointer;flex-shrink:0;">Send</div>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- Quests -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;">Quests</div>
+      <div style="font-size:12px;color:#5C7CE0;font-weight:600;cursor:pointer;">See all</div>
+    </div>
+    <sc-for list="{{ quests }}" as="q" hint-placeholder-count="2">
+      <div style="background:#141417;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:14px 16px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-weight:700;font-size:13.5px;">{{ q.icon }} {{ q.title }}</div>
+          <div style="display:flex;gap:6px;">
+            <div style="background:{{ q.xpChipBg }};color:{{ q.xpChipColor }};font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;">+{{ q.xp }} XP</div>
+            <div style="display:flex;align-items:center;gap:3px;background:rgba(244,193,78,0.16);color:#F4C14E;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;"><img src="coin-daisy.png" alt="coin" style="width:12px;height:12px;border-radius:50%;display:block;" />+{{ q.coins }}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#9A9AA2;margin-bottom:8px;">{{ q.desc }}</div>
+        <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
+          <div style="height:100%;width:{{ q.percent }};background:{{ q.barColor }};border-radius:999px;"></div>
+        </div>
+      </div>
+    </sc-for>
+
+    <!-- Vocab review -->
+    <div style="display:flex;align-items:center;justify-content:space-between;background:#141417;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:15px 16px;margin:14px 0;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:42px;height:42px;border-radius:12px;background:{{ accent16 }};display:flex;align-items:center;justify-content:center;font-size:19px;">🧠</div>
+        <div>
+          <div style="font-weight:700;font-size:13.5px;">{{ vocabDue }} words to review</div>
+          <div style="font-size:11.5px;color:#9A9AA2;margin-top:2px;">Spaced repetition</div>
+        </div>
+      </div>
+      <div style="background:{{ accent }};color:white;font-size:12px;font-weight:700;border-radius:999px;padding:8px 16px;cursor:pointer;">Review</div>
+    </div>
+
+    <!-- Badges -->
+    <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;margin:14px 0 10px 0;">Badges</div>
+    <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;">
+      <sc-for list="{{ badges }}" as="b" hint-placeholder-count="5">
+        <div style="flex-shrink:0;width:74px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;opacity:{{ b.opacity }};">
+          <div style="width:56px;height:56px;border-radius:16px;background:{{ b.bg }};border:1px solid {{ b.border }};display:flex;align-items:center;justify-content:center;font-size:24px;">{{ b.emoji }}</div>
+          <div style="font-size:10px;color:#9A9AA2;font-weight:600;line-height:1.2;">{{ b.name }}</div>
+        </div>
+      </sc-for>
+    </div>
+</sc-if>
+
+    <!-- ===================== SPEAK (Chat Tutor) ===================== -->
+    <sc-if value="{{ isSpeak }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:17px;">Chat Tutor</div>
+        <div style="background:{{ accent16 }};color:{{ accentLight }};font-size:11px;font-weight:700;border-radius:999px;padding:5px 11px;">🤖 AI active</div>
+      </div>
+
+      <div style="background:#141417;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:16px;margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:600;line-height:1.5;margin-bottom:6px;">{{ lastExchangeFr }}</div>
+        <div style="font-size:12.5px;color:#9A9AA2;">{{ lastExchangeEn }}</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:16px 0 26px 0;">
+        <div style="position:relative;width:100%;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+          <div style="position:absolute;left:12px;bottom:-6px;">
+            <img src="mascot-fox.png" alt="mascot" style="width:58px;height:auto;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,0.45));" />
+          </div>
+          <div style="position:relative;width:152px;height:152px;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;inset:0;border-radius:50%;border:2px solid {{ accent45 }};animation:ff-pulse-ring 2.2s ease-out infinite;"></div>
+            <div style="position:absolute;inset:10px;border-radius:50%;border:2px solid {{ accent30 }};animation:ff-pulse-ring 2.2s ease-out 0.4s infinite;"></div>
+            <div onClick="{{ toggleListening }}" style="position:relative;width:120px;height:120px;border-radius:50%;background:{{ speakMicBg }};display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 30px rgba(47,95,224,0.45);animation:{{ speakMicAnim }};">
+              <svg width="38" height="38" viewBox="0 0 24 24" fill="none">
+                <rect x="9" y="2" width="6" height="12" rx="3" fill="white"></rect>
+                <path d="M5 11a7 7 0 0 0 14 0" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"></path>
+                <line x1="12" y1="18" x2="12" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"></line>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;margin-bottom:4px;">{{ speakStatusTitle }}</div>
+        <div style="font-size:13px;color:#9A9AA2;max-width:260px;line-height:1.4;">{{ speakStatusSub }}</div>
+        <div onClick="{{ toggleTextFallback }}" style="margin-top:14px;font-size:12.5px;color:{{ accentLight }};font-weight:600;text-decoration:underline;cursor:pointer;">{{ textLinkLabel }}</div>
+      <sc-if value="{{ textFallbackOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;width:100%;margin-top:12px;">
+          <input type="text" value="{{ textDraft }}" onChange="{{ setTextDraft }}" onKeyDown="{{ handleTextKeyDown }}" placeholder="Écris ton message…" style="flex:1;background:#181818;border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:10px 16px;color:white;font-size:13px;font-family:'Inter',sans-serif;outline:none;" />
+          <div onClick="{{ sendTextMessage }}" style="background:{{ accent }};color:white;font-size:12.5px;font-weight:700;border-radius:999px;padding:10px 18px;cursor:pointer;flex-shrink:0;">Send</div>
+        </div>
+      </sc-if>
+      </div>
+
+      <sc-if value="{{ correctionChip }}" hint-placeholder-val="{{ false }}">
+        <div style="background:rgba(244,193,78,0.12);border:1px solid rgba(244,193,78,0.3);border-radius:14px;padding:12px 14px;font-size:12.5px;color:#F4C14E;font-weight:600;">{{ correctionChip }}</div>
+      </sc-if>
+    </sc-if>
+
+    <!-- ===================== ROLEPLAY ===================== -->
+    <sc-if value="{{ isRoleplay }}" hint-placeholder-val="{{ false }}">
+      <div style="position:relative;border-radius:22px;overflow:hidden;height:180px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.07);">
+        <img src="scenes/cafe-striped-awning.jpg" alt="scene" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:30% 60%;" />
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,11,13,0) 40%, rgba(11,11,13,0.92) 100%);"></div>
+        <div style="position:absolute;left:16px;right:16px;bottom:14px;">
+          <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:19px;">{{ roleplayScenarioTitle }}</div>
+          <div style="font-size:12px;color:#C7C7CE;margin-top:3px;">{{ roleplayScenarioDesc }}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:6px;justify-content:center;margin-bottom:16px;">
+        <sc-for list="{{ roleplayTurns }}" as="turn" hint-placeholder-count="3">
+          <div style="width:26px;height:5px;border-radius:999px;background:{{ turn.active }};"></div>
+        </sc-for>
+      </div>
+
+      <div style="background:#141417;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:14px 16px;margin-bottom:20px;text-align:center;">
+        <div style="font-size:14.5px;font-weight:600;line-height:1.5;">{{ roleplayBotLine }}</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:6px 0 20px 0;">
+        <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+          <div style="position:absolute;inset:0;border-radius:50%;border:2px solid {{ accent45 }};animation:ff-pulse-ring 2.2s ease-out infinite;"></div>
+          <div onClick="{{ toggleListening }}" style="position:relative;width:92px;height:92px;border-radius:50%;background:{{ roleplayMicBg }};display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 30px rgba(47,95,224,0.45);animation:{{ roleplayMicAnim }};">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+              <rect x="9" y="2" width="6" height="12" rx="3" fill="white"></rect>
+              <path d="M5 11a7 7 0 0 0 14 0" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"></path>
+              <line x1="12" y1="18" x2="12" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"></line>
+            </svg>
+          </div>
+        </div>
+        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;">{{ roleplayStatus }}</div>
+        <div onClick="{{ toggleTextFallback }}" style="margin-top:12px;font-size:12.5px;color:{{ accentLight }};font-weight:600;text-decoration:underline;cursor:pointer;">{{ textLinkLabel }}</div>
+        <sc-if value="{{ textFallbackOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:8px;width:100%;margin-top:12px;">
+            <input type="text" value="{{ textDraft }}" onChange="{{ setTextDraft }}" onKeyDown="{{ handleTextKeyDown }}" placeholder="Écris ta réponse…" style="flex:1;background:#181818;border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:10px 16px;color:white;font-size:13px;font-family:'Inter',sans-serif;outline:none;" />
+            <div onClick="{{ sendTextMessage }}" style="background:{{ accent }};color:white;font-size:12.5px;font-weight:700;border-radius:999px;padding:10px 18px;cursor:pointer;flex-shrink:0;">Send</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ===================== STORY MODE ===================== -->
+    <sc-if value="{{ isStory }}" hint-placeholder-val="{{ false }}">
+      <div style="position:relative;border-radius:22px;overflow:hidden;height:170px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.07);">
+        <img src="scenes/quebec-street-illustration.png" alt="Old Québec street scene" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 40%;" />
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,11,13,0) 45%, rgba(11,11,13,0.9) 100%);"></div>
+        <div style="position:absolute;left:16px;right:16px;bottom:12px;">
+          <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:17px;">{{ storyTitle }}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:5px;margin-bottom:16px;">
+        <sc-for list="{{ storyChapterDots }}" as="d" hint-placeholder-count="5">
+          <div style="flex:1;height:5px;border-radius:999px;background:{{ d.done }};"></div>
+        </sc-for>
+      </div>
+
+      <div style="background:#141417;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:16px;margin-bottom:14px;">
+        <div style="font-size:14px;line-height:1.6;margin-bottom:10px;">{{ storyChapter }}</div>
+        <div style="font-size:12.5px;color:#7C9AF0;font-weight:600;">{{ storyPrompt }}</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 20px 0;">
+        <div style="position:relative;width:112px;height:112px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;">
+          <div style="position:absolute;inset:0;border-radius:50%;border:2px solid {{ accent45 }};animation:ff-pulse-ring 2.2s ease-out infinite;"></div>
+          <div onClick="{{ storyMicTap }}" style="position:relative;width:86px;height:86px;border-radius:50%;background:{{ storyMicBg }};display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 30px rgba(47,95,224,0.45);animation:{{ storyMicAnim }};">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <rect x="9" y="2" width="6" height="12" rx="3" fill="white"></rect>
+              <path d="M5 11a7 7 0 0 0 14 0" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"></path>
+              <line x1="12" y1="18" x2="12" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"></line>
+            </svg>
+          </div>
+        </div>
+        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;">{{ storyStatus }}</div>
+        <div onClick="{{ toggleTextFallback }}" style="margin-top:12px;font-size:12.5px;color:{{ accentLight }};font-weight:600;text-decoration:underline;cursor:pointer;">{{ textLinkLabel }}</div>
+        <sc-if value="{{ textFallbackOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:8px;width:100%;margin-top:12px;">
+            <input type="text" value="{{ textDraft }}" onChange="{{ setTextDraft }}" onKeyDown="{{ handleTextKeyDown }}" placeholder="Écris la suite…" style="flex:1;background:#181818;border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:10px 16px;color:white;font-size:13px;font-family:'Inter',sans-serif;outline:none;" />
+            <div onClick="{{ sendTextMessage }}" style="background:{{ accent }};color:white;font-size:12.5px;font-weight:700;border-radius:999px;padding:10px 18px;cursor:pointer;flex-shrink:0;">Send</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ===================== QUESTS ===================== -->
+    <sc-if value="{{ isQuests }}" hint-placeholder-val="{{ false }}">
+      <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:17px;margin-bottom:14px;">Quests</div>
+      <sc-for list="{{ allQuests }}" as="q" hint-placeholder-count="2">
+        <div style="background:#141417;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:14px 16px;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-weight:700;font-size:13.5px;">{{ q.icon }} {{ q.title }}</div>
+            <div style="background:rgba(255,255,255,0.08);color:#9A9AA2;font-size:10px;font-weight:700;border-radius:999px;padding:3px 9px;">{{ q.tag }}</div>
+          </div>
+          <div style="font-size:12px;color:#9A9AA2;margin-bottom:8px;">{{ q.desc }}</div>
+          <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;margin-bottom:8px;">
+            <div style="height:100%;width:{{ q.percent }};background:{{ q.barColor }};border-radius:999px;"></div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <div style="background:{{ q.xpChipBg }};color:{{ q.xpChipColor }};font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;">+{{ q.xp }} XP</div>
+            <div style="display:flex;align-items:center;gap:3px;background:rgba(244,193,78,0.16);color:#F4C14E;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;"><img src="coin-daisy.png" alt="coin" style="width:12px;height:12px;border-radius:50%;display:block;" />+{{ q.coins }}</div>
+          </div>
+        </div>
+      </sc-for>
+
+      <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;margin:20px 0 12px 0;">Badge gallery</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+        <sc-for list="{{ allBadges }}" as="b" hint-placeholder-count="8">
+          <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;opacity:{{ b.opacity }};">
+            <div style="width:100%;aspect-ratio:1;border-radius:16px;background:{{ b.bg }};border:1px solid {{ b.border }};display:flex;align-items:center;justify-content:center;font-size:22px;">{{ b.emoji }}</div>
+            <div style="font-size:9.5px;color:#9A9AA2;font-weight:600;line-height:1.2;">{{ b.name }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- ===================== PROFILE ===================== -->
+    <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:20px;">
+        <div style="position:relative;width:84px;height:84px;margin-bottom:10px;">
+          <div style="width:84px;height:84px;border-radius:50%;border:3px solid {{ accent55 }};overflow:hidden;background:#181818;display:flex;align-items:center;justify-content:center;font-size:40px;">
+            <sc-if value="{{ profileAvatarIsPhoto }}" hint-placeholder-val="{{ true }}">
+              <img src="{{ profilePhotoSrc }}" alt="avatar" style="width:100%;height:100%;object-fit:cover;display:block;" />
+            </sc-if>
+            <sc-if value="{{ profileAvatarEmoji }}" hint-placeholder-val="{{ false }}">
+              <span>{{ profileAvatarEmoji }}</span>
+            </sc-if>
+          </div>
+          <div onClick="{{ triggerUpload }}" style="position:absolute;bottom:-2px;right:-2px;width:28px;height:28px;border-radius:50%;background:{{ accent }};border:2px solid #0B0B0D;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"></path>
+              <circle cx="12" cy="13" r="3.5"></circle>
+            </svg>
+          </div>
+          <input type="file" accept="image/*" ref="{{ setFileInputRef }}" onChange="{{ handlePhotoUpload }}" style="display:none;" />
+        </div>
+        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:18px;">{{ profileName }}</div>
+        <div style="font-size:12.5px;color:#9A9AA2;margin-top:2px;">Level {{ level }} · {{ profileCefr }}</div>
+        <div onClick="{{ triggerUpload }}" style="margin-top:8px;font-size:12px;color:{{ accentLight }};font-weight:600;text-decoration:underline;cursor:pointer;">Upload a photo</div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#141417;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:15px 16px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img src="coin-daisy.png" alt="coin" style="width:42px;height:42px;border-radius:50%;display:block;flex-shrink:0;" />
+          <div>
+            <div style="font-weight:700;font-size:13.5px;">{{ coins }} coins</div>
+            <div style="display:flex;align-items:center;gap:3px;font-size:11.5px;color:#9A9AA2;margin-top:2px;">Streak freeze — {{ streakFreezeCost }} <img src="coin-daisy.png" alt="coin" style="width:12px;height:12px;border-radius:50%;display:inline-block;" /> · {{ streakFreezes }} owned</div>
+          </div>
+        </div>
+        <div onClick="{{ buyStreakFreeze }}" style="background:{{ accent }};color:white;font-size:12px;font-weight:700;border-radius:999px;padding:8px 16px;cursor:pointer;opacity:{{ freezeButtonOpacity }};">Buy</div>
+      </div>
+
+      <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;margin-bottom:10px;">Themes</div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;">
+        <sc-for list="{{ themes }}" as="t" hint-placeholder-count="4">
+          <div onClick="{{ t.onSelect }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+            <div style="width:100%;aspect-ratio:1;border-radius:16px;background:{{ t.color }};border:2px solid {{ t.borderColor }};box-shadow:0 6px 14px rgba(0,0,0,0.35);position:relative;display:flex;align-items:center;justify-content:center;opacity:{{ t.opacity }};">
+              <sc-if value="{{ t.showLock }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:14px;">🔒</span>
+              </sc-if>
+              <sc-if value="{{ t.showCheck }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:16px;color:white;">✓</span>
+              </sc-if>
+            </div>
+            <div style="font-size:10px;color:#9A9AA2;font-weight:600;">{{ t.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;margin-bottom:10px;">Avatars</div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;">
+        <sc-for list="{{ avatarOptions }}" as="a" hint-placeholder-count="6">
+          <div onClick="{{ a.onSelect }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+            <div style="width:100%;aspect-ratio:1;border-radius:50%;background:linear-gradient(160deg,#1c2b57,#101018);border:2px solid {{ a.ringColor }};box-shadow:0 6px 14px rgba(0,0,0,0.35);position:relative;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:{{ a.opacity }};overflow:hidden;">
+              <sc-if value="{{ a.isPhoto }}" hint-placeholder-val="{{ false }}">
+                <img src="{{ profilePhotoSrc }}" alt="avatar" style="width:100%;height:100%;object-fit:cover;display:block;" />
+              </sc-if>
+              <sc-if value="{{ a.emoji }}" hint-placeholder-val="{{ false }}">
+                <span>{{ a.emoji }}</span>
+              </sc-if>
+              <sc-if value="{{ a.showLock }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:#0B0B0D;border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:9px;">🔒</div>
+              </sc-if>
+              <sc-if value="{{ a.showCheck }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:{{ accent }};border:1px solid #0B0B0D;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">✓</div>
+              </sc-if>
+            </div>
+            <div style="font-size:9px;color:#9A9AA2;font-weight:600;">{{ a.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ buyFeedback }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;font-size:12px;color:{{ accentLight }};font-weight:600;margin-top:-8px;margin-bottom:8px;">{{ buyFeedback }} <sc-if value="{{ buyFeedbackShowReserve }}" hint-placeholder-val="{{ false }}">({{ streakFreezes }} in reserve)</sc-if></div>
+      </sc-if>
+    </sc-if>
+
+  </div>
+
+  <!-- ===================== BOTTOM TAB BAR ===================== -->
+  <div style="position:relative;display:flex;align-items:center;justify-content:space-around;background:#0F0F12;border-top:1px solid rgba(255,255,255,0.08);padding:10px 6px 20px 6px;flex-shrink:0;">
+    <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="6">
+      <div onClick="{{ tab.onSelect }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-width:44px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ tab.color }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="{{ tab.iconPath }}"></path>
+        </svg>
+        <div style="font-size:9.5px;color:{{ tab.color }};font-weight:700;">{{ tab.label }}</div>
+      </div>
+    </sc-for>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 390, &quot;height&quot;: 844}}">
+class Component extends DCLogic {
+  state = {
+    listening: false,
+    track: 'metro', // 'metro' | 'quebec'
+    activeTab: 'Learn',
+    theme: 'Classic',
+    avatarChoice: 'photo', // 'photo' | an emoji
+    coins: 340,
+    streakFreezes: 0,
+    buyFeedback: null,
+    uploadedPhoto: null,
+    textFallbackOpen: false,
+    textDraft: '',
+    lastTypedMessage: null,
+    storyChapterIndex: 0,
+    storyListening: false,
+  };
+
+  componentDidMount() {
+    try {
+      const saved = localStorage.getItem('ff-profile-photo');
+      if (saved) this.setState({ uploadedPhoto: saved });
+    } catch (e) {}
+  }
+
+  triggerUpload = () => {
+    if (this.fileInputEl) this.fileInputEl.click();
+  };
+
+  setFileInputRef = (el) => { this.fileInputEl = el; };
+
+  storyMicTap = () => {
+    if (this.state.storyListening) return; // already progressing
+    const STORY_CHAPTERS = 5;
+    this.setState({ storyListening: true });
+    setTimeout(() => {
+      this.setState(s => ({
+        storyListening: false,
+        storyChapterIndex: Math.min(STORY_CHAPTERS - 1, s.storyChapterIndex + 1),
+      }));
+    }, 1400);
+  };
+
+  toggleTextFallback = () => this.setState(s => ({ textFallbackOpen: !s.textFallbackOpen }));
+  setTextDraft = (e) => this.setState({ textDraft: e.target.value });
+  sendTextMessage = () => {
+    const text = this.state.textDraft.trim();
+    if (!text) return;
+    this.setState({ lastTypedMessage: text, textDraft: '', textFallbackOpen: false });
+  };
+  handleTextKeyDown = (e) => {
+    if (e.key === 'Enter') this.sendTextMessage();
+  };
+
+  handlePhotoUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      this.setState({ uploadedPhoto: dataUrl, avatarChoice: 'photo' });
+      try { localStorage.setItem('ff-profile-photo', dataUrl); } catch (err) {}
+    };
+    reader.readAsDataURL(file);
+  };
+
+  toggleListening = () => this.setState(s => ({ listening: !s.listening }));
+  toggleTrack = () => this.setState(s => ({ track: s.track === 'metro' ? 'quebec' : 'metro' }));
+  setTab = (label) => this.setState({ activeTab: label });
+  setTheme = (name) => this.setState({ theme: name });
+  setAvatarChoice = (choice) => this.setState({ avatarChoice: choice });
+  buyStreakFreeze = () => {
+    const cost = 50;
+    if (this.state.coins < cost) {
+      this.setState({ buyFeedback: 'Not enough coins', buyFeedbackShowReserve: false });
+      return;
+    }
+    this.setState(s => ({ coins: s.coins - cost, streakFreezes: s.streakFreezes + 1, buyFeedback: 'Streak freeze added!', buyFeedbackShowReserve: true }));
+  };
+
+  renderVals() {
+    const THEME_COLORS = { Classic: '#2F5FE0', Sunrise: '#FF6F59', Ocean: '#1F8A9E', Autumn: '#C9762C', City: '#7C5CBF' };
+    function hexToRgba(hex, a) {
+      const h = hex.replace('#', '');
+      const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+      return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+    }
+    function lighten(hex, amt) {
+      const h = hex.replace('#', '');
+      const r = Math.min(255, parseInt(h.substring(0, 2), 16) + amt);
+      const g = Math.min(255, parseInt(h.substring(2, 4), 16) + amt);
+      const b = Math.min(255, parseInt(h.substring(4, 6), 16) + amt);
+      return 'rgb(' + r + ',' + g + ',' + b + ')';
+    }
+    const rawProfileName = 'Arnold Schwarzenegger';
+    const displayName = rawProfileName.length > 12 ? rawProfileName.slice(0, 12) + '…' : rawProfileName;
+    const themeName = this.state.theme || 'Classic';
+    const accent = THEME_COLORS[themeName];
+    const accentLight = lighten(accent, 28);
+    const accent14 = hexToRgba(accent, 0.14);
+    const accent16 = hexToRgba(accent, 0.16);
+    const accent30 = hexToRgba(accent, 0.3);
+    const accent40 = hexToRgba(accent, 0.4);
+    const accent45 = hexToRgba(accent, 0.45);
+    const accent55 = hexToRgba(accent, 0.55);
+    const accent90 = hexToRgba(accent, 0.9);
+    const accent28 = hexToRgba(accent, 0.28);
+    const STORY_CHAPTERS_TEXT = [
+      { fr: 'Il est huit heures du soir dans le Vieux-Québec. Toi et ta sœur marchez près du Château Frontenac quand vous remarquez une vieille clé dorée sur le trottoir.', prompt: 'Qu\'est-ce que vous faites ?' },
+      { fr: 'Bonne idée ! Vous décidez d\'explorer. Une petite porte en bois, cachée derrière un café, semble correspondre à la clé. Une plaque indique : « Chocolaterie — fermée depuis 1998 ».', prompt: 'Ouvrez-vous la porte avec la clé, ou frappez-vous d\'abord ?' },
+      { fr: 'La porte s\'ouvre en grinçant. À l\'intérieur, il y a une vieille recette de chocolat chaud écrite à la main, et une carte du Québec avec un endroit marqué d\'une croix rouge.', prompt: 'Décidez-vous de suivre la carte, ou de garder la recette et de partir ?' },
+      { fr: 'Vous suivez la carte jusqu\'à la cabane à sucre familiale à l\'extérieur de la ville. Le propriétaire, surpris, vous explique que la clé appartenait à sa grand-mère !', prompt: 'Que dites-vous au propriétaire ? Lui rendez-vous la clé ?' },
+      { fr: 'Le propriétaire, ému, vous invite à goûter sa tire d\'érable en remerciement. Vous et votre sœur repartez avec une nouvelle histoire… et de nouveaux mots de vocabulaire québécois ! Fin. 🍁', prompt: null },
+    ];
+    const THEME_WALLPAPERS = {
+      Sunrise: 'themes/sunrise-paris-bg.png',
+      City: 'themes/city-quebec-bg.jpg',
+      Ocean: 'themes/ocean-france-bg.jpg',
+    };
+    const wallpaperSrc = THEME_WALLPAPERS[themeName] || '';
+    const hasWallpaper = !!wallpaperSrc;
+    const level = 6;
+    const xp = 812;
+    const floor = 750, ceiling = 1050;
+    const xpPercentNum = Math.min(1, Math.max(0, (xp - floor) / (ceiling - floor)));
+    const deg = Math.round(xpPercentNum * 360);
+    const track = this.state.track;
+    const isQuebec = track === 'quebec';
+
+    const scenes = {
+      metro: { photo: 'café terrace, Paris, morning light', type: 'ROLEPLAY', title: 'Au café', meta: 'Order a coffee and a croissant · 8 min' },
+      quebec: { photo: 'sugar shack, Québec countryside, autumn', type: 'ROLEPLAY', title: 'À la cabane à sucre', meta: 'Try some maple taffy · 8 min' },
+    };
+    const scene = scenes[track];
+
+    const badgesAll = [
+      { emoji: '👣', name: 'First Step', earned: true },
+      { emoji: '🔥', name: 'Momentum', earned: true },
+      { emoji: '☕', name: 'Cafe Regular', earned: true },
+      { emoji: '🧠', name: 'Word Collector', earned: false },
+      { emoji: '🍁', name: 'Quebec Explorer', earned: false },
+      { emoji: '🌟', name: 'Level 10', earned: false },
+    ];
+
+    const iconPaths = {
+      Learn: 'M3 11l9-7 9 7M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9',
+      Speak: 'M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
+      Roleplay: 'M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm8 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM3 16c1-3 4-4 5-4s2 1 4 1 3-1 4-1 4 1 5 4',
+      Story: 'M4 4h7a3 3 0 0 1 3 3v13a3 3 0 0 0-3-2H4zM20 4h-7a3 3 0 0 0-3 3v13a3 3 0 0 1 3-2h7z',
+      Quests: 'M12 2v20M2 12h20M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z',
+      Profile: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1.5-4 5-6 8-6s6.5 2 8 6',
+    };
+    const activeTab = this.state.activeTab;
+    const isLearn = activeTab === 'Learn';
+    const isSpeak = activeTab === 'Speak';
+    const isRoleplay = activeTab === 'Roleplay';
+    const isStory = activeTab === 'Story';
+    const isQuests = activeTab === 'Quests';
+    const isProfile = activeTab === 'Profile';
+
+    const listening = this.state.listening;
+
+    return {
+      isLearn,
+      isSpeak, isRoleplay, isStory, isQuests, isProfile,
+      isOther: false,
+      activeTab,
+      activeTabIconPath: iconPaths[activeTab],
+      greeting: displayName,
+      level,
+      nextLevel: level + 1,
+      cefr: 'A2',
+      streak: '12',
+      coins: this.state.coins,
+      xpToNext: ceiling - xp,
+      xpPercent: Math.round(xpPercentNum * 100) + '%',
+      ringGradient: `conic-gradient(${accent} 0deg ${deg}deg, rgba(255,255,255,0.09) ${deg}deg 360deg)`,
+      sessionDots: [
+        { color: accent },
+        { color: accent },
+        { color: 'rgba(255,255,255,0.12)' },
+      ],
+      metroActiveBg: isQuebec ? 'transparent' : accent,
+      metroActiveColor: isQuebec ? '#9A9AA2' : '#FFFFFF',
+      quebecActiveBg: isQuebec ? accent : 'transparent',
+      quebecActiveColor: isQuebec ? '#FFFFFF' : '#9A9AA2',
+      toggleTrack: this.toggleTrack,
+      scenePhotoSrc: isQuebec ? 'scenes/quebec-sugar-shack.png' : 'scenes/cafe-striped-awning.jpg',
+      scenePhotoPosition: isQuebec ? '50% 40%' : '30% 60%',
+      sessionType: scene.type,
+      sessionTitle: scene.title,
+      sessionMeta: scene.meta,
+      toggleListening: this.toggleListening,
+      micBg: this.state.listening ? accentLight : accent,
+      micAnim: this.state.listening ? 'ff-pulse 1.6s ease-out infinite' : 'none',
+      micStatusTitle: this.state.listening ? 'Listening…' : 'Tap to talk',
+      micStatusSub: this.state.listening
+        ? 'Speak naturally — I\'ll respond as soon as you pause.'
+        : 'Your voice tutor is ready for today\'s session.',
+      quests: [
+        { icon: '💬', title: 'Say hello!', desc: 'Send 5 messages to the tutor today.', xp: 20, coins: 5, percent: '60%' },
+        { icon: '🎭', title: 'Dialogue master', desc: 'Finish 3 different roleplays this week.', xp: 110, coins: 25, percent: '33%' },
+      ].map(q => ({ ...q, xpChipBg: accent16, xpChipColor: accentLight, barColor: accent })),
+      vocabDue: 12,
+      badges: badgesAll.map(b => ({
+        emoji: b.emoji,
+        name: b.name,
+        opacity: b.earned ? '1' : '0.35',
+        bg: b.earned ? accent14 : '#141417',
+        border: b.earned ? accent40 : 'rgba(255,255,255,0.08)',
+      })),
+      tabs: ['Learn', 'Speak', 'Roleplay', 'Story', 'Quests', 'Profile'].map(label => ({
+        label,
+        iconPath: iconPaths[label],
+        color: this.state.activeTab === label ? accent : '#6B6B76',
+        onSelect: () => this.setTab(label),
+      })),
+
+      // ---------------- SPEAK (Chat Tutor) ----------------
+      speakMicBg: listening ? accentLight : accent,
+      speakMicAnim: listening ? 'ff-pulse 1.6s ease-out infinite' : 'none',
+      speakStatusTitle: listening ? 'Listening…' : 'Tap to start talking',
+      speakStatusSub: listening
+        ? 'Speak naturally — I\'ll respond as soon as you pause.'
+        : 'Open-ended conversation, calibrated to your level.',
+      lastExchangeFr: '« Qu\'est-ce que tu as fait ce week-end ? »',
+      lastExchangeEn: 'What did you do this weekend?',
+      correctionChip: this.state.listening ? null : '✏️ 1 gentle correction from your last reply',
+      accent, accent14, accent16, accent30, accent40, accent45, accent55, accent90, accentLight, accent28,
+      hasWallpaper, hasNoWallpaper: !hasWallpaper, wallpaperSrc,
+
+      // ---------------- ROLEPLAY ----------------
+      roleplayScenarioTitle: isQuebec ? 'À la cabane à sucre' : 'At the Cafe ☕',
+      roleplayScenarioDesc: isQuebec ? 'Discover maple taffy at a sugar shack.' : 'Order a coffee (and a croissant!) at a Parisian café.',
+      roleplayTurns: [
+        { active: accent }, { active: 'rgba(255,255,255,0.12)' }, { active: 'rgba(255,255,255,0.12)' },
+      ],
+      roleplayMicBg: listening ? accentLight : accent,
+      roleplayMicAnim: listening ? 'ff-pulse 1.6s ease-out infinite' : 'none',
+      roleplayStatus: listening ? 'Listening…' : 'Tap to respond in character',
+      roleplayBotLine: 'Bonjour ! Bienvenue au café. Qu\'est-ce que je vous sers aujourd\'hui ?',
+
+      // ---------------- STORY ----------------
+      storyTitle: 'The Mystery in Quebec 🕵️',
+      storyChapter: STORY_CHAPTERS_TEXT[this.state.storyChapterIndex].fr,
+      storyPrompt: STORY_CHAPTERS_TEXT[this.state.storyChapterIndex].prompt || '',
+      storyChapterDots: STORY_CHAPTERS_TEXT.map((c, i) => ({
+        done: i <= this.state.storyChapterIndex ? accent : 'rgba(255,255,255,0.12)',
+      })),
+      storyMicBg: this.state.storyListening ? accentLight : accent,
+      storyMicAnim: this.state.storyListening ? 'ff-pulse 1.6s ease-out infinite' : 'none',
+      storyStatus: this.state.storyListening
+        ? 'Listening…'
+        : (this.state.storyChapterIndex >= STORY_CHAPTERS_TEXT.length - 1 ? 'The end 🍁' : 'Tap to continue the story'),
+      storyMicTap: this.storyMicTap,
+
+      // ---------------- QUESTS (full) ----------------
+      allQuests: [
+        { icon: '💬', title: 'Say hello!', desc: 'Send 5 messages to the tutor today.', xp: 20, coins: 5, percent: '60%', tag: 'Daily' },
+        { icon: '🎭', title: 'Dialogue master', desc: 'Finish 3 different roleplays this week.', xp: 110, coins: 25, percent: '33%', tag: 'Weekly' },
+      ].map(q => ({ ...q, xpChipBg: accent16, xpChipColor: accentLight, barColor: accent })),
+      allBadges: badgesAll.map(b => ({
+        emoji: b.emoji,
+        name: b.name,
+        opacity: b.earned ? '1' : '0.35',
+        bg: b.earned ? accent14 : '#141417',
+        border: b.earned ? accent40 : 'rgba(255,255,255,0.08)',
+      })),
+
+      // ---------------- PROFILE ----------------
+      profileName: displayName,
+      profileCefr: 'A2',
+      themes: [
+        { name: 'Classic', color: '#2F5FE0', unlockLevel: 1 },
+        { name: 'Sunrise', color: '#FF6F59', unlockLevel: 3 },
+        { name: 'Ocean', color: '#1F8A9E', unlockLevel: 5 },
+        { name: 'City', color: '#7C5CBF', unlockLevel: 10 },
+      ].map(t => {
+        const unlocked = level >= t.unlockLevel;
+        const active = themeName === t.name;
+        return {
+          color: t.color,
+          borderColor: active ? '#FFFFFF' : 'rgba(255,255,255,0.12)',
+          showLock: !unlocked,
+          showCheck: unlocked && active,
+          opacity: unlocked ? '1' : '0.4',
+          label: unlocked ? t.name : `Lvl ${t.unlockLevel}`,
+          onSelect: unlocked
+            ? () => this.setTheme(t.name)
+            : () => this.setState({ buyFeedback: `🔒 ${t.name} unlocks at Level ${t.unlockLevel} — keep earning XP!`, buyFeedbackShowReserve: false }),
+        };
+      }),
+      avatarOptions: [
+        { key: 'photo', kind: 'photo' },
+        { key: '🦊', kind: 'emoji', unlockLevel: 1 },
+        { key: '🐨', kind: 'emoji', unlockLevel: 1 },
+        { key: '🦋', kind: 'emoji', unlockLevel: 1 },
+        { key: '🐸', kind: 'emoji', unlockLevel: 7 },
+        { key: '🦄', kind: 'emoji', unlockLevel: 12 },
+      ].map(a => {
+        const unlocked = level >= (a.unlockLevel || 1);
+        const active = this.state.avatarChoice === a.key;
+        return {
+          isPhoto: a.kind === 'photo',
+          emoji: a.kind === 'emoji' ? a.key : '',
+          opacity: unlocked ? '1' : '0.4',
+          ringColor: active ? accent : 'rgba(255,255,255,0.1)',
+          showLock: !unlocked,
+          showCheck: unlocked && active,
+          label: unlocked ? (a.kind === 'photo' ? 'Photo' : '') : `Lvl ${a.unlockLevel}`,
+          onSelect: unlocked ? () => this.setAvatarChoice(a.key) : null,
+        };
+      }),
+      streakFreezeCost: 50,
+      canAffordFreeze: this.state.coins >= 50,
+      freezeButtonOpacity: this.state.coins >= 50 ? '1' : '0.4',
+      streakFreezes: this.state.streakFreezes,
+      buyFeedback: this.state.buyFeedback,
+      buyFeedbackShowReserve: !!this.state.buyFeedbackShowReserve,
+      buyStreakFreeze: this.buyStreakFreeze,
+      profileAvatarIsPhoto: this.state.avatarChoice === 'photo',
+      profileAvatarEmoji: this.state.avatarChoice !== 'photo' ? this.state.avatarChoice : '',
+      profilePhotoSrc: this.state.uploadedPhoto || 'avatar-user.png',
+      triggerUpload: this.triggerUpload,
+      setFileInputRef: this.setFileInputRef,
+      handlePhotoUpload: this.handlePhotoUpload,
+      toggleTextFallback: this.toggleTextFallback,
+      textFallbackOpen: this.state.textFallbackOpen,
+      textDraft: this.state.textDraft,
+      setTextDraft: this.setTextDraft,
+      sendTextMessage: this.sendTextMessage,
+      handleTextKeyDown: this.handleTextKeyDown,
+      textLinkLabel: this.state.textFallbackOpen ? 'Hide text input' : 'Type a message instead',
+    };
+  }
+}
+
+</script>
+</body>
+</html>
