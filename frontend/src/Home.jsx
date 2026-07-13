@@ -42,6 +42,9 @@ export default function Home() {
   const [textOpen, setTextOpen] = useState(false)
   const [textDraft, setTextDraft] = useState('')
   const [buyFeedback, setBuyFeedback] = useState(null)
+  const [lastExchange, setLastExchange] = useState(null)
+  const [aiActive, setAiActive] = useState(null)
+  const [chatBusy, setChatBusy] = useState(false)
   const recognitionRef = useRef(null)
 
   async function loadProfile() {
@@ -86,17 +89,24 @@ export default function Home() {
   }
 
   async function sendMessage(text) {
-    if (!text.trim()) return
+    if (!text.trim()) return null
     setTextDraft('')
     setTextOpen(false)
-    const res = await fetch(`${API}/api/chat/${PROFILE_NAME}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text }),
-    })
-    const result = await res.json()
-    loadProfile()
-    return result
+    setChatBusy(true)
+    try {
+      const res = await fetch(`${API}/api/chat/${PROFILE_NAME}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      })
+      const result = await res.json()
+      setLastExchange({ userText: text, reply: result.reply, corrections: result.corrections || [] })
+      setAiActive(result.ai_active)
+      loadProfile()
+      return result
+    } finally {
+      setChatBusy(false)
+    }
   }
 
   function toggleListening() {
@@ -141,6 +151,9 @@ export default function Home() {
   }
 
   const accentLight = lighten(ACCENT, 28)
+  const accent45 = hexToRgba(ACCENT, 0.45)
+  const accent30 = hexToRgba(ACCENT, 0.3)
+  const accent16 = hexToRgba(ACCENT, 0.16)
   const scene = SCENES[profile.track]
   const canAfford = profile.coins >= profile.streak_freeze_cost
 
@@ -311,7 +324,84 @@ export default function Home() {
           </>
         )}
 
-        {activeTab !== 'Learn' && (
+        {activeTab === 'Speak' && (
+          <>
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 17 }}>Chat Tutor</div>
+              <div style={{ background: accent16, color: accentLight, fontSize: 11, fontWeight: 700, borderRadius: 999, padding: '5px 11px' }}>
+                {aiActive === true ? '🤖 AI active' : aiActive === false ? '📴 Offline mode' : '🤖 Ready'}
+              </div>
+            </div>
+
+            {/* Last exchange card */}
+            <div style={{ background: '#141417', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 16, marginBottom: 20 }}>
+              {lastExchange ? (
+                <>
+                  <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, marginBottom: 6 }}>{lastExchange.reply}</div>
+                  <div style={{ fontSize: 12.5, color: '#9A9AA2' }}>You said: &ldquo;{lastExchange.userText}&rdquo;</div>
+                </>
+              ) : (
+                <div style={{ fontSize: 13.5, color: '#9A9AA2', lineHeight: 1.5 }}>Say something in French to get started — your tutor will reply and gently correct any mistakes.</div>
+              )}
+            </div>
+
+            {/* Mic */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '16px 0 26px' }}>
+              <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                <div style={{ position: 'absolute', left: 12, bottom: -6 }}>
+                  <img src="/assets/mascot-fox.png" alt="mascot" style={{ width: 58, filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.45))' }} />
+                </div>
+                <div style={{ position: 'relative', width: 152, height: 152, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${accent45}`, animation: 'pulse-ring 2.2s ease-out infinite' }} />
+                  <div style={{ position: 'absolute', inset: 10, borderRadius: '50%', border: `2px solid ${accent30}`, animation: 'pulse-ring 2.2s ease-out 0.4s infinite' }} />
+                  <div onClick={toggleListening} style={{ position: 'relative', width: 120, height: 120, borderRadius: '50%', background: listening ? accentLight : ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: `0 10px 30px ${accent45}`, animation: listening ? 'mic-pulse 1.6s ease-out infinite' : 'none' }}>
+                    <svg width="38" height="38" viewBox="0 0 24 24" fill="none">
+                      <rect x="9" y="2" width="6" height="12" rx="3" fill="white" />
+                      <path d="M5 11a7 7 0 0 0 14 0" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" />
+                      <line x1="12" y1="18" x2="12" y2="22" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
+                {listening ? 'Listening…' : chatBusy ? 'Thinking…' : lastExchange ? 'Tap to reply' : 'Tap to start chatting'}
+              </div>
+              <div style={{ fontSize: 13, color: '#9A9AA2', maxWidth: 260, lineHeight: 1.4 }}>
+                {listening ? "Speak naturally — I'll respond as soon as you pause." : "Practice a real conversation in French, out loud."}
+              </div>
+              <div onClick={() => setTextOpen(!textOpen)} style={{ marginTop: 14, fontSize: 12.5, color: accentLight, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>
+                {textOpen ? 'Hide text input' : 'Type a message instead'}
+              </div>
+              {textOpen && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', marginTop: 12 }}>
+                  <input
+                    type="text"
+                    value={textDraft}
+                    onChange={(e) => setTextDraft(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && sendMessage(textDraft)}
+                    placeholder="Écris ton message…"
+                    style={{ flex: 1, background: '#181818', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 999, padding: '10px 16px', color: 'white', fontSize: 13, outline: 'none' }}
+                  />
+                  <div onClick={() => sendMessage(textDraft)} style={{ background: ACCENT, color: 'white', fontSize: 12.5, fontWeight: 700, borderRadius: 999, padding: '10px 18px', cursor: 'pointer', flexShrink: 0 }}>Send</div>
+                </div>
+              )}
+            </div>
+
+            {/* Corrections */}
+            {lastExchange?.corrections?.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {lastExchange.corrections.map((c, i) => (
+                  <div key={i} style={{ background: 'rgba(244,193,78,0.12)', border: '1px solid rgba(244,193,78,0.3)', borderRadius: 14, padding: '12px 14px', fontSize: 12.5, color: '#F4C14E', fontWeight: 600 }}>
+                    {typeof c === 'string' ? c : (c.explanation || `${c.original ?? ''} → ${c.corrected ?? ''}`)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab !== 'Learn' && activeTab !== 'Speak' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '90px 24px', gap: 12 }}>
             <div style={{ width: 72, height: 72, borderRadius: '50%', background: hexToRgba(ACCENT, 0.14), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -320,7 +410,7 @@ export default function Home() {
             </div>
             <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 17 }}>{activeTab}</div>
             <div style={{ fontSize: 13, color: '#9A9AA2', maxWidth: 240, lineHeight: 1.5 }}>
-              Home is live and wired to the real backend. {activeTab} is next up on the build list.
+              Home and Speak are live and wired to the real backend. {activeTab} is next up on the build list.
             </div>
           </div>
         )}
