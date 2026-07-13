@@ -239,11 +239,16 @@ export default function Home() {
       setListening(false)
       return
     }
+    setChatError(null)
     const rec = new SpeechRecognition()
     rec.lang = 'fr-FR'
     rec.onresult = async (e) => {
       const transcript = e.results[0][0].transcript
       setListening(false)
+      if (!transcript || !transcript.trim()) {
+        setChatError("Didn't catch that. The mic listens for French, so an English question can be hard for it to hear — try again, or use \u201cType a message instead.\u201d")
+        return
+      }
       const result = await handler(transcript)
       if (result?.reply && 'speechSynthesis' in window) {
         const utter = new SpeechSynthesisUtterance(result.reply)
@@ -251,7 +256,16 @@ export default function Home() {
         window.speechSynthesis.speak(utter)
       }
     }
-    rec.onerror = () => setListening(false)
+    rec.onerror = (e) => {
+      setListening(false)
+      if (e.error === 'no-speech') {
+        setChatError("Didn't hear anything — try again, or use \u201cType a message instead.\u201d")
+      } else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        setChatError('Microphone access is blocked. Check your browser/phone mic permissions for this site.')
+      } else {
+        setChatError("Mic error (" + e.error + "). Try again, or use \u201cType a message instead.\u201d")
+      }
+    }
     rec.onend = () => setListening(false)
     recognitionRef.current = rec
     rec.start()
@@ -304,7 +318,7 @@ export default function Home() {
           </div>
         </div>
 
-        {chatError && (activeTab === 'Speak' || activeTab === 'Roleplay' || activeTab === 'Story') && (
+        {chatError && (activeTab === 'Learn' || activeTab === 'Speak' || activeTab === 'Roleplay' || activeTab === 'Story') && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'rgba(255,90,90,0.1)', border: '1px solid rgba(255,90,90,0.3)', borderRadius: 14, padding: '10px 14px', marginBottom: 16 }}>
             <div style={{ fontSize: 12.5, color: '#FF8A8A' }}>{chatError}</div>
             <div onClick={() => setChatError(null)} style={{ fontSize: 12, color: '#FF8A8A', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Dismiss</div>
