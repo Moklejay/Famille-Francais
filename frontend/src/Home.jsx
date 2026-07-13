@@ -131,7 +131,7 @@ export default function Home() {
       })
       if (!res.ok) throw new Error(`Server error (${res.status})`)
       const result = await res.json()
-      setLastExchange({ userText: text, reply: result.reply, corrections: result.corrections || [] })
+      setLastExchange({ userText: text, reply: result.reply || "Hmm, I didn't quite catch that — try asking again!", corrections: result.corrections || [] })
       setAiActive(result.ai_active)
       setTranslation(null)
       setShowTranslation(false)
@@ -160,7 +160,7 @@ export default function Home() {
       })
       if (!res.ok) throw new Error(`Server error (${res.status})`)
       const result = await res.json()
-      setRoleplayHistory((h) => [...(h || []), { role: 'bot', text: result.reply }])
+      setRoleplayHistory((h) => [...(h || []), { role: 'bot', text: result.reply || "Hmm, I didn't quite catch that — try again!" }])
       loadProfile()
       return result
     } catch (e) {
