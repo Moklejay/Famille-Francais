@@ -25,6 +25,16 @@ const SCENES = {
   quebec: { photo: '/assets/scenes/quebec-sugar-shack.png', tag: 'ROLEPLAY', title: 'À la cabane à sucre', meta: 'Try some maple taffy · 8 min' },
 }
 
+async function fetchWithTimeout(url, options, ms = 45000) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), ms)
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 const ROLEPLAY_OPENERS = {
   metro: "Bonjour ! Bienvenue au caf\u00e9. Qu'est-ce que je vous sers aujourd'hui ?",
   quebec: "Bonjour ! Bienvenue \u00e0 la cabane \u00e0 sucre. Vous voulez go\u00fbter la tire d'\u00e9rable ?",
@@ -56,6 +66,7 @@ export default function Home() {
   const [translation, setTranslation] = useState(null)
   const [showTranslation, setShowTranslation] = useState(false)
   const [translateBusy, setTranslateBusy] = useState(false)
+  const [chatError, setChatError] = useState(null)
   const recognitionRef = useRef(null)
 
   async function loadProfile() {
@@ -111,12 +122,14 @@ export default function Home() {
     setTextDraft('')
     setTextOpen(false)
     setChatBusy(true)
+    setChatError(null)
     try {
-      const res = await fetch(`${API}/api/chat/${PROFILE_NAME}`, {
+      const res = await fetchWithTimeout(`${API}/api/chat/${PROFILE_NAME}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
       })
+      if (!res.ok) throw new Error(`Server error (${res.status})`)
       const result = await res.json()
       setLastExchange({ userText: text, reply: result.reply, corrections: result.corrections || [] })
       setAiActive(result.ai_active)
@@ -124,6 +137,9 @@ export default function Home() {
       setShowTranslation(false)
       loadProfile()
       return result
+    } catch (e) {
+      setChatError(e.name === 'AbortError' ? "That took too long — the server might still be waking up. Try again in a moment." : "Couldn't reach the tutor. Check your connection and try again.")
+      return null
     } finally {
       setChatBusy(false)
     }
@@ -134,17 +150,23 @@ export default function Home() {
     setTextDraft('')
     setTextOpen(false)
     setChatBusy(true)
+    setChatError(null)
     setRoleplayHistory((h) => [...(h || []), { role: 'user', text }])
     try {
-      const res = await fetch(`${API}/api/chat/${PROFILE_NAME}`, {
+      const res = await fetchWithTimeout(`${API}/api/chat/${PROFILE_NAME}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
       })
+      if (!res.ok) throw new Error(`Server error (${res.status})`)
       const result = await res.json()
       setRoleplayHistory((h) => [...(h || []), { role: 'bot', text: result.reply }])
       loadProfile()
       return result
+    } catch (e) {
+      setChatError(e.name === 'AbortError' ? "That took too long — the server might still be waking up. Try again in a moment." : "Couldn't reach the tutor. Check your connection and try again.")
+      setRoleplayHistory((h) => (h || []).slice(0, -1))
+      return null
     } finally {
       setChatBusy(false)
     }
@@ -153,12 +175,17 @@ export default function Home() {
   async function advanceStoryCall() {
     if (!storyView || storyView.is_last) return storyView
     setStoryBusy(true)
+    setChatError(null)
     try {
-      const res = await fetch(`${API}/api/story/${PROFILE_NAME}/advance?story_id=${storyView.story_id}`, { method: 'POST' })
+      const res = await fetchWithTimeout(`${API}/api/story/${PROFILE_NAME}/advance?story_id=${storyView.story_id}`, { method: 'POST' })
+      if (!res.ok) throw new Error(`Server error (${res.status})`)
       const view = await res.json()
       setStoryView(view)
       loadProfile()
       return view
+    } catch (e) {
+      setChatError(e.name === 'AbortError' ? "That took too long — the server might still be waking up. Try again in a moment." : "Couldn't reach the story. Check your connection and try again.")
+      return null
     } finally {
       setStoryBusy(false)
     }
@@ -276,6 +303,13 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {chatError && (activeTab === 'Speak' || activeTab === 'Roleplay' || activeTab === 'Story') && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'rgba(255,90,90,0.1)', border: '1px solid rgba(255,90,90,0.3)', borderRadius: 14, padding: '10px 14px', marginBottom: 16 }}>
+            <div style={{ fontSize: 12.5, color: '#FF8A8A' }}>{chatError}</div>
+            <div onClick={() => setChatError(null)} style={{ fontSize: 12, color: '#FF8A8A', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Dismiss</div>
+          </div>
+        )}
 
         {activeTab === 'Learn' && (
           <>
