@@ -51,6 +51,11 @@ export default function Home() {
   const [aiActive, setAiActive] = useState(null)
   const [chatBusy, setChatBusy] = useState(false)
   const [roleplayHistory, setRoleplayHistory] = useState(null)
+  const [storyView, setStoryView] = useState(null)
+  const [storyBusy, setStoryBusy] = useState(false)
+  const [translation, setTranslation] = useState(null)
+  const [showTranslation, setShowTranslation] = useState(false)
+  const [translateBusy, setTranslateBusy] = useState(false)
   const recognitionRef = useRef(null)
 
   async function loadProfile() {
@@ -76,6 +81,7 @@ export default function Home() {
   useEffect(() => {
     if (!profile) return
     setRoleplayHistory([{ role: 'bot', text: ROLEPLAY_OPENERS[profile.track] }])
+    fetch(`${API}/api/story/${PROFILE_NAME}`).then((r) => r.json()).then(setStoryView)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.track])
 
@@ -114,6 +120,8 @@ export default function Home() {
       const result = await res.json()
       setLastExchange({ userText: text, reply: result.reply, corrections: result.corrections || [] })
       setAiActive(result.ai_active)
+      setTranslation(null)
+      setShowTranslation(false)
       loadProfile()
       return result
     } finally {
@@ -139,6 +147,56 @@ export default function Home() {
       return result
     } finally {
       setChatBusy(false)
+    }
+  }
+
+  async function advanceStoryCall() {
+    if (!storyView || storyView.is_last) return storyView
+    setStoryBusy(true)
+    try {
+      const res = await fetch(`${API}/api/story/${PROFILE_NAME}/advance?story_id=${storyView.story_id}`, { method: 'POST' })
+      const view = await res.json()
+      setStoryView(view)
+      loadProfile()
+      return view
+    } finally {
+      setStoryBusy(false)
+    }
+  }
+
+  async function storyAdvanceHandler() {
+    const view = await advanceStoryCall()
+    return { reply: view?.chapter_fr }
+  }
+
+  async function toggleTranslation() {
+    if (!lastExchange?.reply) return
+    if (showTranslation) {
+      setShowTranslation(false)
+      return
+    }
+    if (translation) {
+      setShowTranslation(true)
+      return
+    }
+    setTranslateBusy(true)
+    try {
+      const res = await fetch(`${API}/api/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: lastExchange.reply }),
+      })
+      const result = await res.json()
+      if (result.available && result.translation) {
+        setTranslation(result.translation)
+        setShowTranslation(true)
+      } else {
+        setTranslation('__unavailable__')
+      }
+    } catch {
+      setTranslation('__unavailable__')
+    } finally {
+      setTranslateBusy(false)
     }
   }
 
@@ -372,8 +430,18 @@ export default function Home() {
             <div style={{ background: '#141417', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 16, marginBottom: 20 }}>
               {lastExchange ? (
                 <>
-                  <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, marginBottom: 6 }}>{lastExchange.reply}</div>
-                  <div style={{ fontSize: 12.5, color: '#9A9AA2' }}>You said: &ldquo;{lastExchange.userText}&rdquo;</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, marginBottom: 6 }}>
+                    {showTranslation && translation && translation !== '__unavailable__' ? translation : lastExchange.reply}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ fontSize: 12.5, color: '#9A9AA2' }}>You said: &ldquo;{lastExchange.userText}&rdquo;</div>
+                    <div onClick={toggleTranslation} style={{ fontSize: 11.5, color: accentLight, fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                      {translateBusy ? 'Translating…' : showTranslation ? '🇫🇷 French' : '🇬🇧 English'}
+                    </div>
+                  </div>
+                  {translation === '__unavailable__' && !translateBusy && (
+                    <div style={{ fontSize: 11, color: '#7C7C86', marginTop: 6 }}>Translation needs AI mode (set ANTHROPIC_API_KEY on the backend) — offline mode can't translate.</div>
+                  )}
                 </>
               ) : (
                 <div style={{ fontSize: 13.5, color: '#9A9AA2', lineHeight: 1.5 }}>Say something in French to get started — your tutor will reply and gently correct any mistakes.</div>
@@ -497,7 +565,72 @@ export default function Home() {
           </>
         )}
 
-        {activeTab !== 'Learn' && activeTab !== 'Speak' && activeTab !== 'Roleplay' && (
+        {activeTab === 'Story' && storyView && (
+          <>
+            {/* Hero */}
+            <div style={{ position: 'relative', borderRadius: 22, overflow: 'hidden', height: 170, marginBottom: 16, border: '1px solid rgba(255,255,255,0.07)' }}>
+              <img src={scene.photo} alt="story scene" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 40%' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(11,11,13,0) 45%, rgba(11,11,13,0.9) 100%)' }} />
+              <div style={{ position: 'absolute', left: 16, right: 16, bottom: 12 }}>
+                <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 17 }}>{storyView.title}</div>
+              </div>
+            </div>
+
+            {/* Chapter dots */}
+            <div style={{ display: 'flex', gap: 5, marginBottom: 16 }}>
+              {Array.from({ length: storyView.chapter_count }).map((_, i) => (
+                <div key={i} style={{ flex: 1, height: 5, borderRadius: 999, background: i <= storyView.chapter_index ? ACCENT : 'rgba(255,255,255,0.12)' }} />
+              ))}
+            </div>
+
+            {/* Chapter text */}
+            <div style={{ background: '#141417', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 16, marginBottom: 14 }}>
+              <div style={{ fontSize: 14, lineHeight: 1.6, marginBottom: storyView.prompt ? 10 : 0 }}>{storyView.chapter_fr}</div>
+              {storyView.prompt && <div style={{ fontSize: 12.5, color: '#7C9AF0', fontWeight: 600 }}>{storyView.prompt}</div>}
+            </div>
+
+            {/* Mic / end state */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '10px 0 20px' }}>
+              {!storyView.is_last ? (
+                <>
+                  <div style={{ position: 'relative', width: 112, height: 112, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${accent45}`, animation: 'pulse-ring 2.2s ease-out infinite' }} />
+                    <div onClick={() => toggleListening(storyAdvanceHandler)} style={{ position: 'relative', width: 86, height: 86, borderRadius: '50%', background: listening ? accentLight : ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: `0 10px 30px ${accent45}`, animation: listening ? 'mic-pulse 1.6s ease-out infinite' : 'none' }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                        <rect x="9" y="2" width="6" height="12" rx="3" fill="white" />
+                        <path d="M5 11a7 7 0 0 0 14 0" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" />
+                        <line x1="12" y1="18" x2="12" y2="22" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 15 }}>
+                    {listening ? 'Listening…' : storyBusy ? 'Thinking…' : 'Tap to continue the story'}
+                  </div>
+                  <div onClick={() => setTextOpen(!textOpen)} style={{ marginTop: 12, fontSize: 12.5, color: accentLight, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>
+                    {textOpen ? 'Hide text input' : 'Type a message instead'}
+                  </div>
+                  {textOpen && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', marginTop: 12 }}>
+                      <input
+                        type="text"
+                        value={textDraft}
+                        onChange={(e) => setTextDraft(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && (setTextDraft(''), setTextOpen(false), advanceStoryCall())}
+                        placeholder="Écris la suite…"
+                        style={{ flex: 1, background: '#181818', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 999, padding: '10px 16px', color: 'white', fontSize: 13, outline: 'none' }}
+                      />
+                      <div onClick={() => { setTextDraft(''); setTextOpen(false); advanceStoryCall() }} style={{ background: ACCENT, color: 'white', fontSize: 12.5, fontWeight: 700, borderRadius: 999, padding: '10px 18px', cursor: 'pointer', flexShrink: 0 }}>Send</div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 16 }}>The end 🍁</div>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab !== 'Learn' && activeTab !== 'Speak' && activeTab !== 'Roleplay' && activeTab !== 'Story' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '90px 24px', gap: 12 }}>
             <div style={{ width: 72, height: 72, borderRadius: '50%', background: hexToRgba(ACCENT, 0.14), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
