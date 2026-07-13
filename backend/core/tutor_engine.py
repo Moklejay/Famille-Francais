@@ -87,7 +87,7 @@ def respond_ai(user_text: str, cefr: str, name: str, history: list) -> dict:
         for c in (result.get("corrections") or [])
     ]
     return {
-        "reply": result.get("reply_fr", "Désolé, je n'ai pas de réponse -- réessaie !"),
+        "reply": result.get("reply_fr") or "Désolé, je n'ai pas de réponse -- réessaie !",
         "hint_en": result.get("hint_en"),
         "corrections": corrections_list,
         "new_vocab": result.get("new_vocab") or [],
@@ -134,7 +134,7 @@ def respond_roleplay_ai(scenario: dict, user_text: str, cefr: str, name: str, hi
         for c in (result.get("corrections") or [])
     ]
     return {
-        "reply": result.get("reply_fr", "..."),
+        "reply": result.get("reply_fr") or "Désolé, je n'ai pas de réponse -- réessaie !",
         "hint_en": result.get("hint_en"),
         "corrections": corrections_list,
         "scene_ended": bool(result.get("scene_ended")),
@@ -174,7 +174,7 @@ def respond_story_ai(story_title: str, story_so_far: str, contribution: str, cef
         for c in (result.get("corrections") or [])
     ]
     return {
-        "paragraph": result.get("paragraph_fr", "..."),
+        "paragraph": result.get("paragraph_fr") or "Désolé, je n'ai pas de réponse -- réessaie !",
         "prompt": result.get("prompt_fr"),
         "corrections": corrections_list,
         "story_ended": bool(result.get("story_ended")),
