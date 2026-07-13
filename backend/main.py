@@ -212,6 +212,96 @@ def chat(name: str, req: ChatRequest):
     }
 
 
+# ---------------------------------------------------------------------------
+# story mode
+# ---------------------------------------------------------------------------
+STORY_BY_TRACK = {"metro": "voyage_provence", "quebec": "mystere_quebec"}
+
+
+def _story_view(profile: dict, story_id: str) -> dict:
+    story = cb.STORIES[story_id]
+    idx = profile.setdefault("story_progress", {}).get(story_id, 0)
+    idx = min(idx, len(story["chapters"]) - 1)
+    chapter = story["chapters"][idx]
+    is_last = idx >= len(story["chapters"]) - 1
+    return {
+        "story_id": story_id,
+        "title": story["title"],
+        "chapter_index": idx,
+        "chapter_count": len(story["chapters"]),
+        "chapter_fr": chapter["fr"],
+        "prompt": chapter.get("prompt"),
+        "is_last": is_last,
+        "completed": story_id in profile.get("stories_completed", []),
+    }
+
+
+@app.get("/api/story/{name}")
+def get_story(name: str, story_id: str | None = None):
+    db = _load()
+    profile = db["profiles"][name]
+    _ensure_new_fields(profile)
+    sid = story_id or STORY_BY_TRACK[profile["track"]]
+    return _story_view(profile, sid)
+
+
+@app.post("/api/story/{name}/advance")
+def advance_story(name: str, story_id: str | None = None):
+    db = _load()
+    profile = db["profiles"][name]
+    _ensure_new_fields(profile)
+    sid = story_id or STORY_BY_TRACK[profile["track"]]
+    story = cb.STORIES[sid]
+    progress = profile.setdefault("story_progress", {})
+    idx = progress.get(sid, 0)
+
+    xp_result = None
+    quest_done = []
+    newly = []
+    if idx < len(story["chapters"]) - 1:
+        idx += 1
+        progress[sid] = idx
+        xp_result = game.award_xp(profile, 8, f"Story progress: {story['title']}")
+        if idx >= len(story["chapters"]) - 1:
+            completed = profile.setdefault("stories_completed", [])
+            if sid not in completed:
+                completed.append(sid)
+            quest_done = game.bump_quest_progress(profile, "story", amount=1)
+        newly = game.new_badges(profile)
+    _save(db)
+
+    view = _story_view(profile, sid)
+    view["xp_result"] = xp_result
+    view["quests_completed"] = quest_done
+    view["newly_earned_badges"] = newly
+    return view
+
+
+# ---------------------------------------------------------------------------
+# translate (English toggle for tutor replies)
+# ---------------------------------------------------------------------------
+class TranslateRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/translate")
+def translate(req: TranslateRequest):
+    if not ai_client.is_configured():
+        return {"available": False, "translation": None}
+    try:
+        result = ai_client.chat_json(
+            system_prompt=(
+                "Translate the French text the user sends into natural, casual English. "
+                'Respond ONLY with valid JSON, no other text: {"en": "..."}'
+            ),
+            messages=[{"role": "user", "content": req.text}],
+            max_tokens=300,
+        )
+        return {"available": True, "translation": result.get("en")}
+    except RuntimeError:
+        return {"available": False, "translation": None}
+
+
 @app.get("/api/health")
 def health():
     return {"ok": True}
