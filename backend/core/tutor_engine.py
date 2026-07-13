@@ -58,7 +58,9 @@ propose parfois des mini-scénarios de la vie quotidienne ou de la culture franc
 Québec, Canada français).
 5. Si {name} fait une erreur de grammaire, de genre, de conjugaison ou de vocabulaire, ne la corrige \
 JAMAIS dans le texte de ta réponse -- note-la séparément dans le champ "corrections" du JSON, avec \
-bienveillance, une suggestion, et une explication brève et claire.
+bienveillance, une suggestion, et une explication brève et claire. IMPORTANT : le champ "explanation" \
+doit être écrit EN ANGLAIS (pas en français), car {name} apprend le français et comprend mieux les \
+explications grammaticales en anglais -- seul le champ "suggestion" (l'exemple corrigé) reste en français.
 6. N'aborde jamais de sujets sensibles ou difficiles à moins que {name} ne les amène en premier.
 7. Ne répète pas la même question ou structure de phrase que dans tes 2-3 derniers messages.
 
@@ -103,7 +105,8 @@ RÈGLES :
 3. Sois chaleureux et patient. Si {name} est bloqué(e) ou répond en anglais, reste dans le personnage \
 mais simplifie ta phrase et propose un exemple de réponse possible.
 4. Note les erreurs de grammaire/vocabulaire séparément dans "corrections" (jamais dans ta réplique), \
-avec bienveillance.
+avec bienveillance. Le champ "explanation" doit être écrit EN ANGLAIS (pas en français) -- seul le \
+champ "suggestion" reste en français.
 5. Après au moins {min_turns} échanges, quand la scène arrive à une conclusion naturelle (ex : la \
 commande est passée, le chemin est expliqué, les adieux sont dits), termine la scène avec une réplique \
 de conclusion et mets "scene_ended": true. Sinon "scene_ended": false.
@@ -150,6 +153,9 @@ Intègre son idée de façon créative et cohérente, puis continue l'histoire a
 (3 à 5 phrases) en français calibré au niveau {cefr}. Termine par une question ouverte qui invite la \
 suite -- SAUF si l'histoire est arrivée à une fin naturelle et satisfaisante (après plusieurs \
 chapitres), auquel cas conclus l'histoire et mets "story_ended": true, "prompt_fr": null.
+
+Note les erreurs de grammaire/vocabulaire de {name} séparément dans "corrections", avec bienveillance. \
+Le champ "explanation" doit être écrit EN ANGLAIS (pas en français) -- seul le champ "suggestion" reste en français.
 
 Réponds STRICTEMENT en JSON valide, sans texte avant/après :
 {{"paragraph_fr": "...", "prompt_fr": "... ou null", \
