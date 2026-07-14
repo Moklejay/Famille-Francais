@@ -138,6 +138,21 @@ def set_track(name: str, track: str):
     return _profile_view(profile, name)
 
 
+CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1"]
+
+
+@app.post("/api/profiles/{name}/cefr")
+def set_cefr(name: str, level: str):
+    if level not in CEFR_LEVELS:
+        raise HTTPException(400, f"level must be one of {CEFR_LEVELS}")
+    db = _load()
+    profile = db["profiles"][name]
+    _ensure_new_fields(profile)
+    profile["level"] = level
+    _save(db)
+    return _profile_view(profile, name)
+
+
 # ---------------------------------------------------------------------------
 # streak freeze (new coin sink)
 # ---------------------------------------------------------------------------
@@ -231,6 +246,7 @@ def _story_view(profile: dict, story_id: str) -> dict:
         "chapter_count": len(story["chapters"]),
         "chapter_fr": chapter["fr"],
         "prompt": chapter.get("prompt"),
+        "choices": chapter.get("choices"),
         "is_last": is_last,
         "completed": story_id in profile.get("stories_completed", []),
     }
