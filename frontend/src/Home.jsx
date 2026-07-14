@@ -40,6 +40,8 @@ const ROLEPLAY_OPENERS = {
   quebec: "Bonjour ! Bienvenue \u00e0 la cabane \u00e0 sucre. Vous voulez go\u00fbter la tire d'\u00e9rable ?",
 }
 
+const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1']
+
 const TAB_ICONS = {
   Learn: 'M3 11l9-7 9 7M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9',
   Speak: 'M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
@@ -67,6 +69,10 @@ export default function Home() {
   const [showTranslation, setShowTranslation] = useState(false)
   const [translateBusy, setTranslateBusy] = useState(false)
   const [chatError, setChatError] = useState(null)
+  const [storyTranslation, setStoryTranslation] = useState(null)
+  const [showStoryTranslation, setShowStoryTranslation] = useState(false)
+  const [storyTranslateBusy, setStoryTranslateBusy] = useState(false)
+  const [cefrBusy, setCefrBusy] = useState(false)
   const recognitionRef = useRef(null)
 
   async function loadProfile() {
@@ -76,7 +82,7 @@ export default function Home() {
         res = await fetch(`${API}/api/profiles`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: PROFILE_NAME, level: 'A2', avatar: '🦊' }),
+          body: JSON.stringify({ name: PROFILE_NAME, level: 'A1', avatar: '🦊' }),
         })
       }
       if (!res.ok) throw new Error(`API error ${res.status}`)
@@ -181,6 +187,8 @@ export default function Home() {
       if (!res.ok) throw new Error(`Server error (${res.status})`)
       const view = await res.json()
       setStoryView(view)
+      setStoryTranslation(null)
+      setShowStoryTranslation(false)
       loadProfile()
       return view
     } catch (e) {
@@ -224,6 +232,59 @@ export default function Home() {
       setTranslation('__unavailable__')
     } finally {
       setTranslateBusy(false)
+    }
+  }
+
+  async function toggleCefr() {
+    if (cefrBusy) return
+    const idx = CEFR_LEVELS.indexOf(profile.cefr)
+    const next = CEFR_LEVELS[(idx + 1) % CEFR_LEVELS.length]
+    setCefrBusy(true)
+    try {
+      const res = await fetch(`${API}/api/profiles/${PROFILE_NAME}/cefr?level=${next}`, { method: 'POST' })
+      setProfile(await res.json())
+    } finally {
+      setCefrBusy(false)
+    }
+  }
+
+  function speakFrench(text) {
+    if (!text || !('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel()
+    const utter = new SpeechSynthesisUtterance(text)
+    utter.lang = 'fr-FR'
+    utter.rate = 0.85
+    window.speechSynthesis.speak(utter)
+  }
+
+  async function toggleStoryTranslation() {
+    if (!storyView?.chapter_fr) return
+    if (showStoryTranslation) {
+      setShowStoryTranslation(false)
+      return
+    }
+    if (storyTranslation) {
+      setShowStoryTranslation(true)
+      return
+    }
+    setStoryTranslateBusy(true)
+    try {
+      const res = await fetch(`${API}/api/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: storyView.chapter_fr }),
+      })
+      const result = await res.json()
+      if (result.available && result.translation) {
+        setStoryTranslation(result.translation)
+        setShowStoryTranslation(true)
+      } else {
+        setStoryTranslation('__unavailable__')
+      }
+    } catch {
+      setStoryTranslation('__unavailable__')
+    } finally {
+      setStoryTranslateBusy(false)
     }
   }
 
@@ -304,7 +365,12 @@ export default function Home() {
             </div>
             <div style={{ minWidth: 0, overflow: 'hidden' }}>
               <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 19 }}>{profile.name}</div>
-              <div style={{ fontSize: 13, color: '#9A9AA2', marginTop: 2 }}>Niveau {profile.level} &middot; {profile.cefr}</div>
+              <div style={{ fontSize: 13, color: '#9A9AA2', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span>Niveau {profile.level} &middot;</span>
+                <span onClick={toggleCefr} style={{ color: accentLight, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
+                  {cefrBusy ? '…' : profile.cefr}
+                </span>
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -632,30 +698,59 @@ export default function Home() {
             </div>
 
             {/* Chapter text */}
-            <div style={{ background: '#141417', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 16, marginBottom: 14 }}>
-              <div style={{ fontSize: 14, lineHeight: 1.6, marginBottom: storyView.prompt ? 10 : 0 }}>{storyView.chapter_fr}</div>
-              {storyView.prompt && <div style={{ fontSize: 12.5, color: '#7C9AF0', fontWeight: 600 }}>{storyView.prompt}</div>}
+            <div style={{ background: '#141417', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 16, marginBottom: 10 }}>
+              <div style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 10 }}>
+                {showStoryTranslation && storyTranslation && storyTranslation !== '__unavailable__' ? storyTranslation : storyView.chapter_fr}
+              </div>
+              <div style={{ display: 'flex', gap: 14 }}>
+                <div onClick={() => speakFrench(storyView.chapter_fr)} style={{ fontSize: 11.5, color: accentLight, fontWeight: 700, cursor: 'pointer' }}>🔊 Listen</div>
+                <div onClick={toggleStoryTranslation} style={{ fontSize: 11.5, color: accentLight, fontWeight: 700, cursor: 'pointer' }}>
+                  {storyTranslateBusy ? 'Translating…' : showStoryTranslation ? '🇫🇷 French' : '🇬🇧 English'}
+                </div>
+              </div>
+              {storyTranslation === '__unavailable__' && !storyTranslateBusy && (
+                <div style={{ fontSize: 11, color: '#7C7C86', marginTop: 6 }}>Translation needs AI mode (ANTHROPIC_API_KEY set on the backend).</div>
+              )}
             </div>
 
-            {/* Mic / end state */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '10px 0 20px' }}>
+            {/* Choices / end state */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '4px 0 20px' }}>
               {!storyView.is_last ? (
                 <>
-                  <div style={{ position: 'relative', width: 112, height: 112, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  {storyView.prompt && <div style={{ fontSize: 13, color: '#9A9AA2', fontWeight: 600, marginBottom: 12 }}>{storyView.prompt}</div>}
+
+                  {storyView.choices && storyView.choices.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', marginBottom: 16 }}>
+                      {storyView.choices.map((c, i) => (
+                        <div
+                          key={i}
+                          onClick={() => !storyBusy && advanceStoryCall()}
+                          style={{ background: '#181818', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '12px 14px', textAlign: 'left', cursor: storyBusy ? 'default' : 'pointer', opacity: storyBusy ? 0.6 : 1 }}
+                        >
+                          <div style={{ fontSize: 14, fontWeight: 700 }}>{c.fr}</div>
+                          <div style={{ fontSize: 11.5, color: '#9A9AA2', marginTop: 2 }}>{c.en}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ fontSize: 11.5, color: '#7C7C86', marginBottom: 10 }}>
+                    {storyBusy ? 'Thinking…' : 'Or practice saying your answer out loud:'}
+                  </div>
+
+                  <div style={{ position: 'relative', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
                     <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${accent45}`, animation: 'pulse-ring 2.2s ease-out infinite' }} />
-                    <div onClick={() => toggleListening(storyAdvanceHandler)} style={{ position: 'relative', width: 86, height: 86, borderRadius: '50%', background: listening ? accentLight : ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: `0 10px 30px ${accent45}`, animation: listening ? 'mic-pulse 1.6s ease-out infinite' : 'none' }}>
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <div onClick={() => toggleListening(storyAdvanceHandler)} style={{ position: 'relative', width: 54, height: 54, borderRadius: '50%', background: listening ? accentLight : ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: `0 8px 22px ${accent45}`, animation: listening ? 'mic-pulse 1.6s ease-out infinite' : 'none' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                         <rect x="9" y="2" width="6" height="12" rx="3" fill="white" />
                         <path d="M5 11a7 7 0 0 0 14 0" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" />
                         <line x1="12" y1="18" x2="12" y2="22" stroke="white" strokeWidth="2" strokeLinecap="round" />
                       </svg>
                     </div>
                   </div>
-                  <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 15 }}>
-                    {listening ? 'Listening…' : storyBusy ? 'Thinking…' : 'Tap to continue the story'}
-                  </div>
-                  <div onClick={() => setTextOpen(!textOpen)} style={{ marginTop: 12, fontSize: 12.5, color: accentLight, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>
-                    {textOpen ? 'Hide text input' : 'Type a message instead'}
+                  {listening && <div style={{ fontSize: 12.5, color: '#9A9AA2', marginBottom: 4 }}>Listening…</div>}
+                  <div onClick={() => setTextOpen(!textOpen)} style={{ marginTop: 4, fontSize: 12, color: accentLight, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>
+                    {textOpen ? 'Hide text input' : 'Type instead'}
                   </div>
                   {textOpen && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', marginTop: 12 }}>
