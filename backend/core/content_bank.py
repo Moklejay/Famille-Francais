@@ -336,20 +336,37 @@ STORIES = {
         "chapters": [
             {"fr": "Il est huit heures du soir dans le Vieux-Québec. Toi et ta sœur marchez près du "
                    "Château Frontenac quand vous remarquez une vieille clé dorée sur le trottoir.",
-             "prompt": "Qu'est-ce que vous faites ? (Ramassez-vous la clé ? Cherchez-vous le propriétaire ?)"},
+             "prompt": "Qu'est-ce que vous faites ?",
+             "choices": [
+                 {"fr": "Je ramasse la clé.", "en": "I pick up the key."},
+                 {"fr": "Je cherche le propriétaire.", "en": "I look for the owner."},
+             ]},
             {"fr": "Bonne idée ! Vous décidez d'explorer. Une petite porte en bois, cachée derrière un "
                    "café, semble correspondre à la clé. Une plaque indique : « Chocolaterie -- fermée depuis 1998 ».",
-             "prompt": "Ouvrez-vous la porte avec la clé, ou frappez-vous d'abord ?"},
+             "prompt": "Ouvrez-vous la porte avec la clé, ou frappez-vous d'abord ?",
+             "choices": [
+                 {"fr": "J'ouvre la porte avec la clé.", "en": "I open the door with the key."},
+                 {"fr": "Je frappe d'abord.", "en": "I knock first."},
+             ]},
             {"fr": "La porte s'ouvre en grinçant. À l'intérieur, il y a une vieille recette de chocolat "
                    "chaud écrite à la main, et une carte du Québec avec un endroit marqué d'une croix rouge.",
-             "prompt": "Décidez-vous de suivre la carte, ou de garder la recette et de partir ?"},
+             "prompt": "Décidez-vous de suivre la carte, ou de garder la recette et de partir ?",
+             "choices": [
+                 {"fr": "Je suis la carte.", "en": "I follow the map."},
+                 {"fr": "Je garde la recette et je pars.", "en": "I keep the recipe and leave."},
+             ]},
             {"fr": "Vous suivez la carte jusqu'à la cabane à sucre familiale à l'extérieur de la ville. "
                    "Le propriétaire, surpris, vous explique que la clé appartenait à sa grand-mère !",
-             "prompt": "Que dites-vous au propriétaire ? Lui rendez-vous la clé ?"},
+             "prompt": "Que dites-vous au propriétaire ?",
+             "choices": [
+                 {"fr": "Voici votre clé !", "en": "Here's your key!"},
+                 {"fr": "C'est une belle histoire.", "en": "That's a nice story."},
+             ]},
             {"fr": "Le propriétaire, ému, vous invite à goûter sa tire d'érable en remerciement. "
                    "Vous et votre sœur repartez avec une nouvelle histoire... et de nouveaux mots de "
                    "vocabulaire québécois ! Fin. 🍁",
-             "prompt": None},
+             "prompt": None,
+             "choices": None},
         ],
     },
     "voyage_provence": {
@@ -358,15 +375,28 @@ STORIES = {
         "chapters": [
             {"fr": "Vous arrivez en Provence en été. Le soleil brille et il y a des champs de "
                    "lavande partout.",
-             "prompt": "Qu'est-ce que vous voulez faire en premier : visiter un marché, ou se reposer à l'hôtel ?"},
+             "prompt": "Qu'est-ce que vous voulez faire en premier ?",
+             "choices": [
+                 {"fr": "Je visite le marché.", "en": "I visit the market."},
+                 {"fr": "Je me repose à l'hôtel.", "en": "I rest at the hotel."},
+             ]},
             {"fr": "Au marché, il y a des fromages, des olives, et des fruits frais. Un vendeur "
                    "vous sourit et dit « Bonjour ! Vous voulez goûter ? »",
-             "prompt": "Que répondez-vous au vendeur ?"},
+             "prompt": "Que répondez-vous au vendeur ?",
+             "choices": [
+                 {"fr": "Oui, avec plaisir !", "en": "Yes, with pleasure!"},
+                 {"fr": "Non merci, peut-être plus tard.", "en": "No thanks, maybe later."},
+             ]},
             {"fr": "Vous goûtez un fromage délicieux et achetez un petit pot de miel de lavande.",
-             "prompt": "Où allez-vous ensuite : à la plage, ou dans un petit village dans les collines ?"},
+             "prompt": "Où allez-vous ensuite ?",
+             "choices": [
+                 {"fr": "Je vais à la plage.", "en": "I go to the beach."},
+                 {"fr": "Je vais dans un village.", "en": "I go to a village."},
+             ]},
             {"fr": "Le village est magnifique, avec des rues pavées et des fleurs partout. "
                    "Vous prenez beaucoup de photos avec votre sœur.",
-             "prompt": None},
+             "prompt": None,
+             "choices": None},
         ],
     },
 }
